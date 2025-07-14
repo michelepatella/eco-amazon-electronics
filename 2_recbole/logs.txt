@@ -1,0 +1,4 @@
+saved/BPR-Jun-11-2025_11-18-24.pth	k=64
+saved/LightGCN-Jun-11-2025_11-23-41.pth	n_layers=1
+saved/LightGCN-Jun-11-2025_11-38-53.pth	n_layers=2
+saved/LightGCN-Jun-11-2025_12-09-16.pth	n_layers=3
