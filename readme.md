@@ -16,7 +16,6 @@ To train these models with our data format, just run
 python train_recsys.py
 ```
 
-Normalizzazione?
 
 3. The third step consists in the re-ranking of the prediction lists generated at the previous step. To this aim, the folder `3_re-ranking` provides the script `rerank_linear_comb.py`. This script reads the prediction lists and the augmented dataset, then applies the reranking strategy with different importance weights, and returns the reranked list by saving them in the `reranked_linear_combination_full` folder. To run the script, run the command:
 ```
