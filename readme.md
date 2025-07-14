@@ -25,4 +25,4 @@ python rerank_linear_comb.py
 4. The last step consists in the evaluation process, which can be performed with any evaluation framework. In our work we used [ClayRS](), for which we suggest to refer to set up the environment. The script to run the evaluation can be found in the `4_eval` folder. The scripts read a set of recommendation lists (both pre-reraking and post-reranking) and evaluate them in terms of classic metrics like Precision, recall, ndcg, f1, gini index. To run the evaluation, after setting up the environment, run the command 
 ```
 python eval.py
-```.
+```
