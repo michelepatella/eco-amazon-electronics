@@ -1,17 +1,18 @@
 import json
+from os import getenv
+
+from dotenv import load_dotenv
 from openai import OpenAI
-from together import Together
-import openai
+
+load_dotenv()
+
+MODEL = "gemini-2.5-flash"
+BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+client = OpenAI(base_url=BASE_URL, api_key=getenv("GEMINI_API_KEY"))
 
 
-
-API_KEY = "api_key"
-MODEL = "model/model_version" 
-BASE_URL = "base_url_provider_model"
-
-client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
-
-def estimate_co2_for_product(product_data, llm_model=MODEL):
+def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=4):
     """
     Example of LLM prompting to predict the CO2eq of a product
     """
@@ -52,50 +53,65 @@ def estimate_co2_for_product(product_data, llm_model=MODEL):
     Do not include any markdown formatting or additional JSON wrappers.
     """
 
-    response = client.chat.completions.create(
-        model=llm_model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0
-    )
-    print(response)
-    
-    if not response or not response.choices:
-        print("Error: the model response is not formatted or empty")
+    values = []
+    last_valid_response = None
+
+    for _ in range(num_calls):
+        response = client.chat.completions.create(
+            model=llm_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0
+        )
+        print(response)
+
+        if not response or not response.choices:
+            print("Error: the model response is not formatted or empty")
+            continue
+
+        try:
+            raw_content = response.choices[0].message.content.strip()
+            print(f"\nProcessing product: {product_data.get('title', 'Unknown')[:60]}...")
+
+            # Extract JSON object if there's additional text
+            if "{" in raw_content and "}" in raw_content:
+                start = raw_content.find("{")
+                end = raw_content.rfind("}") + 1
+                raw_content = raw_content[start:end]
+
+            # Clean any remaining newlines or extra spaces
+            raw_content = raw_content.replace("\\n", " ").replace("\\'", "'").replace('\\"', '"').strip()
+
+            # Validate JSON before returning
+            parsed = json.loads(raw_content)  # Test if it's valid JSON
+
+            if parsed.get("co2e_kg") is not None:
+                values.append(float(parsed.get("co2e_kg")))
+                last_valid_response = parsed
+
+        except Exception as e:
+            print(f"Error processing response: {str(e)}")
+            continue
+
+    if not values:
         return json.dumps({
             "co2e_kg": None,
-            "explanation": "Error: no response provided by the model."
+            "explanation": "Error: no valid response provided by the model."
         })
 
-    try:
-        raw_content = response.choices[0].message.content.strip()
-        print(f"\nProcessing product: {product_data.get('title', 'Unknown')[:60]}...")
-        
-        # Extract JSON object if there's additional text
-        if "{" in raw_content and "}" in raw_content:
-            start = raw_content.rfind("{")  # Get the last JSON object
-            end = raw_content.rfind("}") + 1
-            raw_content = raw_content[start:end]
-            
-        # Clean any remaining newlines or extra spaces
-        raw_content = raw_content.replace('\n', ' ').strip()
-        
-        # Validate JSON before returning
-        json.loads(raw_content)  # Test if it's valid JSON
-        return raw_content
-        
-    except Exception as e:
-        print(f"Error processing response: {str(e)}")
-        return json.dumps({
-            "co2e_kg": None,
-            "explanation": f"Error processing response: {str(e)}"
-        })
+    # Average co2e (kg) values across all the
+    # provided responses for the current item
+    avg_value = sum(values) / len(values)
+    last_valid_response["co2e_kg"] = avg_value
+
+    return json.dumps(last_valid_response)
+
 
 def main(num_rows):
     # Load data from the json
     products = []
 
     # split metadata file into several parts due to the size of the original file
-    with open("dataset/metadata_split/meta_1.jsonl", "r", encoding="utf-8") as f:
+    with open("metadata_split/meta_1.jsonl", "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_rows:
                 # this is due to the limits of the API
@@ -139,7 +155,7 @@ def main(num_rows):
                 "co2e_kg": None,
                 "explanation": f"Error processing response: {llm_answer}"
             })
-    
+
     # Save as json
     with open("metadata.json", "a", encoding="utf-8") as out:
         json.dump(results, out, ensure_ascii=False, indent=2)
