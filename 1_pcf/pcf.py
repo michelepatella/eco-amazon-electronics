@@ -111,7 +111,7 @@ def main(num_rows):
     products = []
 
     # split metadata file into several parts due to the size of the original file
-    with open("metadata_split/meta_2.jsonl", "r", encoding="utf-8") as f:
+    with open("metadata_split/meta_3.jsonl", "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_rows:
                 # this is due to the limits of the API
