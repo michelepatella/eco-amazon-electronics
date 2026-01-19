@@ -140,7 +140,7 @@ def main(num_rows):
                     answer_data = json.loads(llm_answer)
 
                     result = {
-                        "product_name": product.get("title", "Senza nome"),
+                        "title": product.get("title", "Senza nome"),
                         "parent_asin": product.get("parent_asin", "Senza ASIN"),
                         "co2e_kg": answer_data.get("co2e_kg"),
                         "source": answer_data.get("source"),
@@ -150,7 +150,7 @@ def main(num_rows):
                 except Exception as e:
                     print(f"Error processing product {product.get('title', 'Unknown')[:60]}: {e}")
                     result = {
-                        "product_name": product.get("title", "Senza nome"),
+                        "title": product.get("title", "Senza nome"),
                         "co2e_kg": None,
                         "explanation": f"Error processing response: {llm_answer}"
                     }

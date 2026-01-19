@@ -57,7 +57,7 @@ def save_results(input_file, output_file):
                         }
 
                     all_results[asin] = {
-                        "product_name": products_mapping.get(asin, "N/A"),
+                        "title": products_mapping.get(asin, "N/A"),
                         "parent_asin": asin,
                         "co2e_kg": pred.get("co2e_kg"),
                         "source": pred.get("source"),
