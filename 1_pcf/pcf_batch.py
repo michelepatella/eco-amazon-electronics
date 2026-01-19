@@ -7,7 +7,6 @@ from google.genai import types
 load_dotenv()
 
 MODEL = "gemini-2.5-flash"
-BATCH_INPUT_FILE = "gemini_batch_input.jsonl"
 
 # Initialize Google GenAI client
 client = genai.Client(api_key=getenv("GEMINI_API_KEY"))
@@ -69,29 +68,32 @@ def estimate_co2_for_product(product_data, llm_model=MODEL):
     return json.dumps(batch_request, ensure_ascii=False)
 
 
-def main(num_rows):
+def main(start_row, num_rows, batch_file_name):
     # Load data from the jsonl
     products = []
 
     # split metadata file into several parts due to the size of the original file
-    with open("metadata_split/meta_3.jsonl", "r", encoding="utf-8") as f:
+    with open("metadata_split/meta_4.jsonl", "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
-            if i >= num_rows:
-                # this is due to the limits of the API
+            # Skip already processed products
+            if i < start_row:
+                continue
+            # Stop when the desired batch size is reached
+            if len(products) >= num_rows:
                 break
             product = json.loads(line.strip())
             products.append(product)
 
     # Create the JSONL file for the batch
-    print(f"Creating batch input file: {BATCH_INPUT_FILE}...")
-    with open(BATCH_INPUT_FILE, "w", encoding="utf-8") as f:
+    print(f"Creating batch input file: {batch_file_name}...")
+    with open(batch_file_name, "w", encoding="utf-8") as f:
         for p in products:
             f.write(estimate_co2_for_product(p) + "\n")
 
     # Upload the file to Gemini API
-    print("Uploading file to Gemini API...")
+    print(f"Uploading file {batch_file_name} to Gemini API...")
     uploaded_file = client.files.upload(
-        file=BATCH_INPUT_FILE,
+        file=batch_file_name,
         config=types.UploadFileConfig(mime_type='application/jsonl')
     )
 
@@ -105,9 +107,10 @@ def main(num_rows):
     print("-" * 30)
     print(f"BATCH JOB CREATED SUCCESSFULLY!")
     print(f"Batch ID: {batch_job.name}")
+    print(f"Range: {start_row} to {start_row + len(products)}")
     print(f"Status: {batch_job.state}")
     print("-" * 30)
 
 
 if __name__ == "__main__":
-    main(num_rows=10000)
+    main(start_row=1800, num_rows=410, batch_file_name="batch_meta4_part4.jsonl")
