@@ -213,7 +213,7 @@ def main():
     """Main function to run environmentally-aware re-ranking."""
 
     # Configuration
-    ITEM_MAP_PATH = "../2_recbole/process_data/item_map_2.tsv"
+    ITEM_MAP_PATH = "../2_recbole/process_data/item_map.tsv"
     SCORE_NORM_PATH = "score_norm.json"
     INPUT_DIRS = ["../2_recbole/preds/full"]
     OUTPUT_BASE_DIR = "reranked_linear_combination_full"

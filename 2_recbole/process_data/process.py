@@ -8,7 +8,7 @@ import io
 #dataset = pd.read_json(io.StringIO("".join(lines)), lines=True)
 # columns: ['rating', 'title', 'text', 'images', 'asin', 'parent_asin', 
 # 'user_id', 'timestamp', 'helpful_vote', 'verified_purchase']
-dataset = pd.read_json('code_recbole/process_data/electronics_CORE_15.jsonl', lines=True)
+dataset = pd.read_json('electronics_CORE_15.jsonl', lines=True)
 print(len(dataset))
 print(dataset.columns)
 
@@ -73,12 +73,12 @@ valid_data = ratings_recbole.iloc[train_size:train_size + valid_size]
 test_data = ratings_recbole.iloc[train_size + valid_size:]
 
 # save DataFrames to tsv files
-train_data.to_csv('code_recbole/dataset/amazon_elec/amazon_elec.train.inter', sep='\t', index=False)
-valid_data.to_csv('code_recbole/dataset/amazon_elec/amazon_elec.valid.inter', sep='\t', index=False)
-test_data.to_csv('code_recbole/dataset/amazon_elec/amazon_elec.test.inter', sep='\t', index=False)
+train_data.to_csv('../dataset/amazon_elec/amazon_elec.train.inter', sep='\t', index=False)
+valid_data.to_csv('../dataset/amazon_elec/amazon_elec.valid.inter', sep='\t', index=False)
+test_data.to_csv('../dataset/amazon_elec/amazon_elec.test.inter', sep='\t', index=False)
 
 # save the sorted dataset with binary ratings
-ratings_recbole.to_csv('code_recbole/dataset/amazon_elec/amazon_elec.inter', sep='\t', index=False)
+ratings_recbole.to_csv('../dataset/amazon_elec/amazon_elec.inter', sep='\t', index=False)
 
 # print dataset statistics
 print(f"Total interactions: {len(ratings_recbole)}")
