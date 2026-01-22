@@ -91,6 +91,7 @@ def train_recbole_hpo(config, model_name, dataset_name, exp_name):
         dataset=dataset_name,
         config_dict={
             'tensorboard': False,
+            'device': device,
             'epochs': config['epochs'],
             'eval_step': 10,
             'learning_rate': config['lr'],
@@ -111,10 +112,10 @@ def run_hpo_bpr():
     """Run HPO for BPR."""
     # Define search space for BPR
     search_space = {
-        'lr': tune.loguniform(1e-4, 1e-2),
-        'embedding_size': tune.choice([32, 64, 128]),
-        'reg_weight': tune.loguniform(1e-6, 1e-3),
-        'epochs': 200
+        'lr': tune.loguniform(1e-4, 5e-3),
+        'embedding_size': tune.choice([32, 64]),
+        'reg_weight': tune.loguniform(1e-5, 1e-4),
+        'epochs': 100
     }
 
     # Run HPO for BPR
@@ -128,7 +129,7 @@ def run_hpo_bpr():
         metric='recall_10',
         mode='max',
         config=search_space,
-        num_samples=20,
+        num_samples=10,
         resources_per_trial={'cpu': 4, 'gpu': 0}
     )
 
@@ -141,11 +142,11 @@ def run_hpo_lightgcn():
     """Run HPO for BPR."""
     # Define search space for Light GCN
     search_space = {
-        'lr': tune.loguniform(1e-4, 1e-2),
-        'embedding_size': tune.choice([32, 64, 128]),
-        'reg_weight': tune.loguniform(1e-6, 1e-3),
+        'lr': tune.loguniform(1e-4, 5e-3),
+        'embedding_size': tune.choice([32, 64]),
+        'reg_weight': tune.loguniform(1e-5, 1e-4),
         'n_layers': tune.choice([1, 2, 3]),
-        'epochs': 200
+        'epochs': 100
     }
 
     # Run HPO for Light GCN
@@ -159,7 +160,7 @@ def run_hpo_lightgcn():
         metric='recall_10',
         mode='max',
         config=search_space,
-        num_samples=30,
+        num_samples=15,
         resources_per_trial={'cpu': 4, 'gpu': 0}
     )
 
@@ -167,6 +168,11 @@ def run_hpo_lightgcn():
     best_config = analysis.get_best_config(metric='recall_10', mode='max')
     return best_config
 
+
+# =============================================
+# Setup
+# =============================================
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 # =============================================
 # HPO both for BPR and Light GCN
@@ -182,6 +188,7 @@ run_recbole(
     dataset='amazon_elec',
     config_dict={
         **best_bpr,
+        'device': device,
         'benchmark_filename': ['train', 'valid', 'test'],
         'checkpoint_dir': './saved/BPR_best'
     }
@@ -194,6 +201,7 @@ run_recbole(
     dataset='amazon_elec',
     config_dict={
         **best_lgcn,
+        'device': device,
         'benchmark_filename': ['train', 'valid', 'test'],
         'checkpoint_dir': './saved/LightGCN_best'
     }
