@@ -130,7 +130,7 @@ def run_hpo_bpr():
         mode='max',
         config=search_space,
         num_samples=10,
-        resources_per_trial={'cpu': 4, 'gpu': 0}
+        resources_per_trial={'cpu': 4}
     )
 
     # Get best config for BPR
@@ -161,7 +161,7 @@ def run_hpo_lightgcn():
         mode='max',
         config=search_space,
         num_samples=15,
-        resources_per_trial={'cpu': 4, 'gpu': 0}
+        resources_per_trial={'cpu': 4}
     )
 
     # Get best config for Light GCN
