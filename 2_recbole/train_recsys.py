@@ -1,3 +1,4 @@
+from ray import tune
 from recbole.quick_start import run_recbole, load_data_and_model
 import os
 import torch
@@ -11,41 +12,45 @@ def get_latest_checkpoint(model_name):
     saved_model_dir = f"./saved/{model_name}"
     checkpoint_files = glob.glob(os.path.join(saved_model_dir, "*.pth"))
     if not checkpoint_files:
-        raise FileNotFoundError(f"No checkpoint found at {saved_model_dir}")
+        raise FileNotFoundError(f"No mdoel checkpoint found at '{saved_model_dir}'.")
     latest_file = sorted(checkpoint_files)[-1]
     return latest_file
 
 
 def get_topk_from_scores(score_matrix, dataset, k, filename, batch_size=1024):
-    """Vectorized top-k from full sort scores and save results."""
+    """Compute top-k items per user and save to a TSV file in batches."""
+
     all_item_tokens = dataset.id2token(dataset.iid_field, range(dataset.item_num))
     all_user_tokens = dataset.id2token(dataset.uid_field, range(dataset.user_num))
 
+    # Write header
     with open(filename, 'w') as f:
         f.write("users\titems\tscores\n")
 
-    for start in tqdm(range(0, score_matrix.shape[0], batch_size), desc="Saving to disk"):
+    # Process users in batches to save memory
+    for start in tqdm(range(0, score_matrix.shape[0], batch_size), desc="Saving to disk..."):
         end = min(start + batch_size, score_matrix.shape[0])
         batch_scores = score_matrix[start:end]
-        topk_scores, topk_items = torch.topk(batch_scores, k, dim=1)
 
+        # Top-k items per user
+        topk_scores, topk_items = torch.topk(batch_scores, k, dim=1)
         batch_user_tokens = [all_user_tokens[u] for u in range(start, end)]
 
-        chunk_rows = []
-        for i, u_token in enumerate(batch_user_tokens):
-            u_items = [all_item_tokens[j] for j in topk_items[i].tolist()]
-            u_scores = topk_scores[i].tolist()
+        # Flatten batch to lines
+        chunk_rows = [
+            f"{u_token}\t{all_item_tokens[i]}\t{s}"
+            for u_token, items, scores in zip(batch_user_tokens, topk_items.tolist(), topk_scores.tolist())
+            for i, s in zip(items, scores)
+        ]
 
-            for item, score in zip(u_items, u_scores):
-                chunk_rows.append(f"{u_token}\t{item}\t{score}")
-
+        # Append batch to file
         with open(filename, 'a') as f:
             f.write("\n".join(chunk_rows) + "\n")
 
 
 def get_topk(model_name_file):
-    """Save top-5, top-10, and top-10 full predictions."""
-    # load model e dataset
+    """Save top-k and full predictions."""
+    # Load model e dataset
     config, model, dataset, train_data, valid_data, test_data = load_data_and_model(model_name_file)
 
     # Full sort scores
@@ -79,84 +84,119 @@ def get_topk(model_name_file):
     pd.concat(top_10_list).to_csv(f'preds/top10/{model_name_file.split("/")[1]}.tsv', sep='\t', header=True, index=False)
 
 
-# dataset
-amazon_elec = 'amazon_elec'
+def train_recbole_hpo(config, model_name, dataset_name, exp_name):
+    """Trainable Ray Tune function."""
+    result = run_recbole(
+        model=model_name,
+        dataset=dataset_name,
+        config_dict={
+            'tensorboard': False,
+            'epochs': config['epochs'],
+            'eval_step': 10,
+            'learning_rate': config['lr'],
+            'embedding_size': config['embedding_size'],
+            'reg_weight': config['reg_weight'],
+            **({'n_layers': config['n_layers']} if model_name == 'LightGCN' else {}),
+            'benchmark_filename': ['train', 'valid', 'test'],
+            'checkpoint_dir': f'./saved/{exp_name}',
+        }
+    )
 
-# Create folders for predictions
-os.makedirs('preds/full', exist_ok=True)
-os.makedirs('preds/top1', exist_ok=True)
-os.makedirs('preds/top2', exist_ok=True)
-os.makedirs('preds/top3', exist_ok=True)
-os.makedirs('preds/top5', exist_ok=True)
-os.makedirs('preds/top10', exist_ok=True)
+    # RecBole returns best valid score dict
+    valid_recall = result['best_valid_score']['recall@10']
+    tune.report(recall_10=valid_recall)
 
-# BPR model
+
+def run_hpo_bpr():
+    """Run HPO for BPR."""
+    # Define search space for BPR
+    search_space = {
+        'lr': tune.loguniform(1e-4, 1e-2),
+        'embedding_size': tune.choice([32, 64, 128]),
+        'reg_weight': tune.loguniform(1e-6, 1e-3),
+        'epochs': 200
+    }
+
+    # Run HPO for BPR
+    analysis = tune.run(
+        tune.with_parameters(
+            train_recbole_hpo,
+            model_name='BPR',
+            dataset_name='amazon_elec',
+            exp_name='BPR_HPO'
+        ),
+        metric='recall_10',
+        mode='max',
+        config=search_space,
+        num_samples=20,
+        resources_per_trial={'cpu': 4, 'gpu': 0}
+    )
+
+    # Get best config for BPR
+    best_config = analysis.get_best_config(metric='recall_10', mode='max')
+    return best_config
+
+
+def run_hpo_lightgcn():
+    """Run HPO for BPR."""
+    # Define search space for Light GCN
+    search_space = {
+        'lr': tune.loguniform(1e-4, 1e-2),
+        'embedding_size': tune.choice([32, 64, 128]),
+        'reg_weight': tune.loguniform(1e-6, 1e-3),
+        'n_layers': tune.choice([1, 2, 3]),
+        'epochs': 200
+    }
+
+    # Run HPO for Light GCN
+    analysis = tune.run(
+        tune.with_parameters(
+            train_recbole_hpo,
+            model_name='LightGCN',
+            dataset_name='amazon_elec',
+            exp_name='LightGCN_HPO'
+        ),
+        metric='recall_10',
+        mode='max',
+        config=search_space,
+        num_samples=30,
+        resources_per_trial={'cpu': 4, 'gpu': 0}
+    )
+
+    # Get best config for Light GCN
+    best_config = analysis.get_best_config(metric='recall_10', mode='max')
+    return best_config
+
+
+# =============================================
+# HPO both for BPR and Light GCN
+# =============================================
+best_bpr = run_hpo_bpr()
+best_lgcn = run_hpo_lightgcn()
+
+# =============================================
+# Final training both for BPR and Light GCN
+# =============================================
 run_recbole(
     model='BPR',
-    dataset=amazon_elec,
+    dataset='amazon_elec',
     config_dict={
-        'tensorboard': False,
-        'epochs': 200,
-        'eval_step': 10,
+        **best_bpr,
         'benchmark_filename': ['train', 'valid', 'test'],
-        'checkpoint_dir': './saved/BPR',
+        'checkpoint_dir': './saved/BPR_best'
     }
 )
-model_file = get_latest_checkpoint("BPR")
+model_file = get_latest_checkpoint("BPR_best")
 get_topk(model_file)
-with open('logs.txt', 'a') as f:
-    f.write(f"{model_file}\tk=64\n")
 
-# LightGCN model (layer=1)
 run_recbole(
     model='LightGCN',
-    dataset=amazon_elec,
+    dataset='amazon_elec',
     config_dict={
-        'tensorboard': False,
-        'epochs': 200,
-        'eval_step': 10,
-        'n_layers': 1,
+        **best_lgcn,
         'benchmark_filename': ['train', 'valid', 'test'],
-        'checkpoint_dir': './saved/LightGCN_layer1',
+        'checkpoint_dir': './saved/LightGCN_best'
     }
 )
-model_file = get_latest_checkpoint("LightGCN_layer1")
+model_file = get_latest_checkpoint("LightGCN_best")
 get_topk(model_file)
-with open('logs.txt', 'a') as f:
-    f.write(f"{model_file}\tn_layers=1\n")
-
-# LightGCN model (layer=2)
-run_recbole(
-    model='LightGCN',
-    dataset=amazon_elec,
-    config_dict={
-        'tensorboard': False,
-        'epochs': 200,
-        'eval_step': 10,
-        'n_layers': 2,
-        'benchmark_filename': ['train', 'valid', 'test'],
-        'checkpoint_dir': './saved/LightGCN_layer2',
-    }
-)
-model_file = get_latest_checkpoint("LightGCN_layer2")
-get_topk(model_file)
-with open('logs.txt', 'a') as f:
-    f.write(f"{model_file}\tn_layers=2\n")
-
-# LightGCN model (layer=3)
-run_recbole(
-    model='LightGCN',
-    dataset=amazon_elec,
-    config_dict={
-        'tensorboard': False,
-        'epochs': 200,
-        'eval_step': 10,
-        'n_layers': 3,
-        'benchmark_filename': ['train', 'valid', 'test'],
-        'checkpoint_dir': './saved/LightGCN_layer3'
-    }
-)
-model_file = get_latest_checkpoint("LightGCN_layer3")
-get_topk(model_file)
-with open('logs.txt', 'a') as f:
-    f.write(f"{model_file}\tn_layers=3\n")
