@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from os import getenv
 
 from dotenv import load_dotenv
@@ -12,7 +13,7 @@ BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 client = OpenAI(base_url=BASE_URL, api_key=getenv("GEMINI_API_KEY"))
 
 
-def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=4):
+def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=1):
     """
     Example of LLM prompting to predict the CO2eq of a product
     """
@@ -63,7 +64,6 @@ def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=4):
             temperature=0.0
         )
         print(response)
-
         if not response or not response.choices:
             print("Error: the model response is not formatted or empty")
             continue
@@ -74,15 +74,15 @@ def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=4):
 
             # Extract JSON object if there's additional text
             if "{" in raw_content and "}" in raw_content:
-                start = raw_content.find("{")
+                start = raw_content.rfind("{")  # Get the last JSON object
                 end = raw_content.rfind("}") + 1
                 raw_content = raw_content[start:end]
 
             # Clean any remaining newlines or extra spaces
-            raw_content = raw_content.replace("\\n", " ").replace("\\'", "'").replace('\\"', '"').strip()
+            clean_content = raw_content.replace('\n', ' ').strip()
 
             # Validate JSON before returning
-            parsed = json.loads(raw_content)  # Test if it's valid JSON
+            parsed = json.loads(clean_content)  # Test if it's valid JSON
 
             if parsed.get("co2e_kg") is not None:
                 values.append(float(parsed.get("co2e_kg")))
@@ -111,7 +111,7 @@ def main(num_rows):
     products = []
 
     # split metadata file into several parts due to the size of the original file
-    with open("metadata_split/meta_1.jsonl", "r", encoding="utf-8") as f:
+    with open("metadata_split/meta_3.jsonl", "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_rows:
                 # this is due to the limits of the API
@@ -119,46 +119,62 @@ def main(num_rows):
             product = json.loads(line.strip())
             products.append(product)
 
-    results = []
+    BATCH_SIZE = 5
+    with open("metadata.json", "w", encoding="utf-8") as out:
+        out.write("[\n")
+        first_item = True
 
-    for product in products:
-        try:
-            llm_answer = estimate_co2_for_product(product)
+        # Parallel execution
+        with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
+            futures = {executor.submit(estimate_co2_for_product, p): i for i, p in enumerate(products)}
+            results_buffer = [None] * len(products)
+            batch_indices = []
 
-            if isinstance(llm_answer, str):
-                if "```json" in llm_answer:
-                    llm_answer = llm_answer.split("```json")[1].split("```")[0].strip()
-                elif "```" in llm_answer:
-                    llm_answer = llm_answer.split("```")[1].strip()
+            for future in as_completed(futures):
+                idx = futures[future]
+                batch_indices.append(idx)
+                product = products[idx]
 
-                if "{" in llm_answer and "}" in llm_answer:
-                    start = llm_answer.rfind("{")
-                    end = llm_answer.rfind("}") + 1
-                    llm_answer = llm_answer[start:end]
+                try:
+                    llm_answer = future.result()
+                    answer_data = json.loads(llm_answer)
 
-                llm_answer = llm_answer.strip()
+                    result = {
+                        "title": product.get("title", "Senza nome"),
+                        "parent_asin": product.get("parent_asin", "Senza ASIN"),
+                        "co2e_kg": answer_data.get("co2e_kg"),
+                        "source": answer_data.get("source"),
+                        "explanation": answer_data.get("explanation")
+                    }
 
-            answer_data = json.loads(llm_answer)
+                except Exception as e:
+                    print(f"Error processing product {product.get('title', 'Unknown')[:60]}: {e}")
+                    result = {
+                        "title": product.get("title", "Senza nome"),
+                        "co2e_kg": None,
+                        "explanation": f"Error processing response: {llm_answer}"
+                    }
 
-            results.append({
-                "product_name": product.get("title", "Senza nome"),
-                "parent_asin": product.get("parent_asin", "Senza ASIN"),
-                "co2e_kg": answer_data.get("co2e_kg"),
-                "source": answer_data.get("source"),
-                "explanation": answer_data.get("explanation")
-            })
+                results_buffer[idx] = result
 
-        except Exception as e:
-            print(f"Error processing product {product.get('title', 'Unknown')[:60]}: {e}")
-            results.append({
-                "product_name": product.get("title", "Senza nome"),
-                "co2e_kg": None,
-                "explanation": f"Error processing response: {llm_answer}"
-            })
+                # Write results to JSON file
+                if len(batch_indices) >= BATCH_SIZE:
+                    for i in sorted(batch_indices):
+                        if not first_item:
+                            out.write(",\n")
+                        out.write(json.dumps(results_buffer[i], ensure_ascii=False))
+                        first_item = False
+                    batch_indices = []  # Reset batch
 
-    # Save as json
-    with open("metadata.json", "a", encoding="utf-8") as out:
-        json.dump(results, out, ensure_ascii=False, indent=2)
+            # Write residual results of the last batch
+            for i in sorted(batch_indices):
+                if not first_item:
+                    out.write(",\n")
+                out.write(json.dumps(results_buffer[i], ensure_ascii=False))
+                first_item = False
+
+        out.write("\n]")
+
 
 if __name__ == "__main__":
-    main(num_rows=100)
+    main(num_rows=10000)
