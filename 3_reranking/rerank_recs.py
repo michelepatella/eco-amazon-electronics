@@ -1,23 +1,64 @@
+import json
+
+import pandas as pd
 import torch
 import numpy as np
 import math
 from collections import defaultdict
+
+from recbole.evaluator import Evaluator
 from tqdm import tqdm
 
 from recbole.utils.case_study import full_sort_topk
 from recbole.quick_start import load_data_and_model
-from recbole.evaluator import Evaluator
 
 
-# dummy function to rerank the reclist
-def pcf_aware_reranker(user_id_external, item_list_external, score_list):
-    pairs = list(zip(item_list_external, score_list))
-    pairs.reverse()
-    reranked_items, reranked_scores = zip(*pairs)
-    return list(reranked_items), list(reranked_scores)
+def pcf_aware_reranker(
+        co2e_scores,
+        item_list_internal,
+        score_list,
+        dataset,
+        id_to_asin,
+        alpha
+):
+    """Calculates PCF-aware to re-rank recommendations."""
+    # Retrieve tokens
+    external_items = []
+    for i in item_list_internal:
+        raw_token = dataset.id2token(dataset.iid_field, int(i))
+        item_idx = int(raw_token)
+        asin = id_to_asin.get(item_idx)
+        external_items.append(asin)
+
+    # Retrieve PCF values
+    pcf_values = [co2e_scores.get(asin) for asin in external_items]
+    pcf_array = np.array(pcf_values)
+
+    # Normalize PCF values
+    max_pcf, min_pcf = pcf_array.max(), pcf_array.min()
+    pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf) \
+        if max_pcf > min_pcf \
+        else np.zeros_like(pcf_array)
+
+    # Normalize predictions
+    preds = np.array(score_list)
+    preds_norm = (preds - preds.min()) / (preds.max() - preds.min()) \
+        if preds.max() > preds.min() \
+        else np.zeros_like(preds)
+
+    # Calculate SaS
+    sas_scores = alpha * preds_norm + (1 - alpha) * pcf_norm
+
+    # Sort items by SaS descending
+    sorted_indices = np.argsort(sas_scores)[::-1]
+    items_np = item_list_internal.cpu().numpy() \
+        if torch.is_tensor(item_list_internal) \
+        else np.array(item_list_internal)
+
+    return items_np[sorted_indices].copy(), sas_scores[sorted_indices].copy()
 
 
-def get_top_k_recommendations(model, k=100):
+def get_top_k_recommendations(model, k):
     """Retrieves top-k recommendations for all the users, given a trained model."""
     # Setup
     batch_size = 1000
@@ -57,7 +98,14 @@ def get_top_k_recommendations(model, k=100):
     return final_scores, final_iids
 
 
-def get_reranked_top_k_recommendations(final_scores, final_iids, k=100):
+def get_reranked_top_k_recommendations(
+        final_scores,
+        final_iids,
+        id_to_asin,
+        co2e_scores,
+        alpha,
+        k,
+):
     # Get user and item IDs external to RecBole,
     # which match with the original dataset info
     ground_truth_map = defaultdict(set)
@@ -69,6 +117,7 @@ def get_reranked_top_k_recommendations(final_scores, final_iids, k=100):
     # Perform the re-ranking with the PCF-aware item data
     pos_matrix_list = []
     pos_len_list = []
+    reranked_items_all_users = []
     test_user_internal_ids = np.unique(test_data.dataset.inter_feat[dataset.uid_field].numpy())
     for idx, internal_uid in enumerate(
             tqdm(test_user_internal_ids, desc=f"Re-ranking top-{k} recommendations...")
@@ -77,32 +126,34 @@ def get_reranked_top_k_recommendations(final_scores, final_iids, k=100):
         internal_items = final_iids[idx]
         item_scores = final_scores[idx].tolist()
 
-        # Get both external user and item IDs
-        external_uid = dataset.id2token(dataset.uid_field, internal_uid)
-        external_items = dataset.id2token(dataset.iid_field, internal_items)
-
         # Re-rank the recommendations taking care about PCF
         reranked_items, reranked_scores = pcf_aware_reranker(
-            external_uid, external_items, item_scores
+            co2e_scores=co2e_scores,
+            item_list_internal=internal_items,
+            score_list=item_scores,
+            dataset=dataset,
+            id_to_asin=id_to_asin,
+            alpha=alpha
         )
-
-        # Convert external items to internal ones
-        reranked_internal = dataset.token2id(dataset.iid_field, reranked_items)
 
         # Retrieve ground truth
         user_gt = ground_truth_map[internal_uid]
 
+        # Save re-ranked items
+        reranked_items_all_users.append(reranked_items[:k])
+
         # For each item, check whether it appears in the ground truth:
         # 0 -> It doesn't appear
         # 1 -> It appears
-        hits = [1 if item in user_gt else 0 for item in reranked_internal]
+        reranked_items = [int(i) for i in reranked_items]
+        hits = [1 if int(item) in user_gt else 0 for item in reranked_items]
         hits = hits[:k]
 
         # Update matrices for evaluation
         pos_matrix_list.append(hits)
         pos_len_list.append(len(user_gt))
 
-    return pos_matrix_list, pos_len_list
+    return pos_matrix_list, pos_len_list, reranked_items_all_users
 
 
 # =============================================
@@ -116,43 +167,51 @@ _, light_gcn_model, *_ = load_data_and_model(
     model_file='../2_recbole/saved/LightGCN_best/LightGCN-Jan-22-2026_21-18-39.pth'
 )
 
+# Load C02 score estimations
+co2e_scores = {}
+with open("../1_pcf/results/final_metadata.jsonl", "r", encoding="utf-8") as f:
+    for line in f:
+        data = json.loads(line)
+        co2e_scores[data["parent_asin"]] = data["co2e_kg"]
+
+# Load item_index -> parent_asin mapping
+item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep='\t')
+id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
+
 # =============================================
 # Standard recommendations
 # =============================================
 # Retrieve the standard recommendations using both trained models
-final_scores_bpr, final_iids_bpr = get_top_k_recommendations(bpr_model)
-final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(light_gcn_model)
+final_scores_bpr, final_iids_bpr = get_top_k_recommendations(
+    model=bpr_model,
+    k=100
+)
+final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
+    model=light_gcn_model,
+    k=100
+)
 
 # =============================================
 # PCF-aware recommendations
 # =============================================
 # Re-rank standard recommendations taking care about PCF
-pos_matrix_list_bpr, pos_len_list_bpr = (
-    get_reranked_top_k_recommendations(final_scores_bpr, final_iids_bpr)
+pos_matrix_list_bpr, pos_len_list_bpr, _ = (
+    get_reranked_top_k_recommendations(
+        final_scores=final_scores_bpr,
+        final_iids=final_iids_bpr,
+        id_to_asin=id_to_asin,
+        co2e_scores=co2e_scores,
+        alpha=0.5,
+        k=10
+    )
 )
-pos_matrix_list_light_gcn, pos_len_list_light_gcn = (
-    get_reranked_top_k_recommendations(final_scores_light_gcn, final_iids_light_gcn)
+pos_matrix_list_light_gcn, pos_len_list_light_gcn, _ = (
+    get_reranked_top_k_recommendations(
+        final_scores=final_scores_light_gcn,
+        final_iids=final_iids_light_gcn,
+        id_to_asin=id_to_asin,
+        co2e_scores=co2e_scores,
+        alpha=0.5,
+        k=10
+    )
 )
-
-"""
-# step 4. evaluate the reranked recommendation list
-print("\n>>> [Phase 4] Running RecBole Evaluator...")
-
-max_k = max(config['topk'])
-pos_matrix = torch.tensor(pos_matrix_list, device=config['device'], dtype=torch.int)[:, :max_k]
-pos_len_tensor = torch.tensor(pos_len_list, device=config['device'], dtype=torch.int).view(-1, 1)
-combined_matrix = torch.cat((pos_matrix, pos_len_tensor), dim=1)
-struct = {
-    'rec.topk': combined_matrix.cpu()
-}
-evaluator = Evaluator(config)
-final_results = evaluator.evaluate(struct)
-
-# print results
-print("\n" + "="*40)
-print(" FINAL RESULTS (Via RecBole Evaluator)")
-print("="*40)
-for metric, value in final_results.items():
-    print(f" {metric}: {value:.4f}")
-print("="*40)
-"""
