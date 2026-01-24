@@ -1,204 +1,101 @@
-import clayrs.content_analyzer as ca
-import clayrs.evaluation as eva
+import torch
 import pandas as pd
-import os
-import warnings
-from tqdm import tqdm
-warnings.filterwarnings("ignore")
+import json
+from recbole.evaluator import Evaluator
+from recbole.quick_start import load_data_and_model
 
-def eval_recommendations(dataset='amazon_elec', ks=[5, 10], relevant_threshold=1):
-    """
-    Valuta le raccomandazioni generate dai modelli LightGCN e BPR
-    """
-    # Cartelle delle predizioni
-    preds_folders = {
-        #'top5': 'code_recbole/preds/top5',
-        #'top10': 'code_recbole/preds/top10'
-        'top5': 're-ranking/reranked_embedding_miniLM/top5',
-        'top10': 're-ranking/reranked_embedding_miniLM/top10',
-        'top1': 're-ranking/reranked_embedding_miniLM/full',
-    }
-    
-    # Modelli da valutare
-    models = ['LightGCN-Jun-11-2025_11-23-41.pth', 'LightGCN-Jun-11-2025_11-38-53.pth', 'LightGCN-Jun-11-2025_12-09-16.pth', 'BPR-Jun-11-2025_11-18-24.pth']
-    
-    # Carica i dati di training e test
-    print(f"Caricamento dati per {dataset}...")
-    train_data = ca.CSVFile(os.path.join('datasets', dataset, "train.tsv"), separator="\t")
-    train_ratings = ca.Ratings(train_data)
-    
-    test_data = ca.CSVFile(os.path.join('datasets', dataset, "test.tsv"), separator="\t")
-    test_ratings = ca.Ratings(test_data)
-    
-    # Dizionario per salvare tutti i risultati
-    all_results = {}
-    
-    # Itera sui diversi k (top-5, top-10)
-    for k in ks:
-        folder_key = f'top{k}'
-        preds_folder = preds_folders[folder_key]
-        
-        print(f"\n=== Valutazione per K={k} ===")
-        
-        # Controlla quali file di predizione esistono
-        if not os.path.exists(preds_folder):
-            print(f"Cartella {preds_folder} non trovata!")
-            continue
-            
-        prediction_files = []
-        for model in models:
-            pred_file = f"{model}.tsv"
-            if os.path.exists(os.path.join(preds_folder, pred_file)):
-                prediction_files.append(pred_file)
-            else:
-                print(f"File {pred_file} non trovato in {preds_folder}")
-        
-        print(f'File di predizione trovati: {prediction_files}')
-        
-        # Definisci le metriche da calcolare
-        metric_list = [
-            eva.PrecisionAtK(k=k, relevant_threshold=relevant_threshold),
-            eva.RecallAtK(k=k, relevant_threshold=relevant_threshold),
-            eva.FMeasureAtK(k=k, relevant_threshold=relevant_threshold),
-            eva.NDCGAtK(k=k),
-            eva.GiniIndex(),
-            #eva.EPC(k=k, original_ratings=train_ratings, ground_truth=test_ratings),
-            #eva.APLT(k=k, original_ratings=train_ratings),
-        ]
-        
-        # Dizionario per i risultati di questo k
-        k_results = {}
-        
-        # Valuta ogni file di predizione
-        for pred_file in tqdm(prediction_files, desc=f"Valutazione Top-{k}"):
-            try:
-                # Carica il file delle predizioni
-                pred_path = os.path.join(preds_folder, pred_file)
-                eval_summary = ca.CSVFile(pred_path, separator="\t")
-                
-                # Prepara le liste per la valutazione
-                truth_list = [test_ratings]
-                rank_list = [ca.Rank(eval_summary)]
-                
-                # Crea il modello di valutazione
-                em = eva.EvalModel(
-                    pred_list=rank_list,
-                    truth_list=truth_list,
-                    metric_list=metric_list
-                )
-                
-                # Calcola le metriche
-                sys_result, users_result = em.fit()
-                sys_result = sys_result.loc[['sys - mean']]
-                sys_result.reset_index(drop=True, inplace=True)
-                
-                # Aggiungi informazioni sul modello
-                model_name = pred_file.replace(f'_top{k}.tsv', '')
-                sys_result['model'] = model_name
-                sys_result['k'] = k
-                
-                # Pulisci i nomi delle colonne
-                sys_result.columns = [x.replace(" - macro", "") for x in sys_result.columns]
-                
-                # Riordina le colonne
-                cols = list(sys_result.columns)
-                cols = cols[-2:] + cols[:-2]  # Metti 'model' e 'k' all'inizio
-                sys_result = sys_result.loc[:, cols]
-                
-                k_results[model_name] = sys_result
-                print(f"✓ {model_name} valutato con successo")
-                
-            except Exception as e:
-                print(f"✗ Errore nella valutazione di {pred_file}: {str(e)}")
-                continue
-        
-        # Salva i risultati per questo k
-        if k_results:
-            k_df = pd.concat([v for v in k_results.values()]).reset_index(drop=True)
-            k_df = k_df.sort_values(by=['model'], ascending=[True])
-            
-            # Salva i risultati
-            os.makedirs('results_embedding_diversify', exist_ok=True)
-            output_file = f'results_embedding_diversify/{dataset}_top{k}_results.tsv'
-            k_df.to_csv(output_file, index=False, sep='\t')
-            print(f"Risultati salvati in: {output_file}")
-            
-            # Mostra un summary dei risultati
-            print(f"\nRisultati Top-{k}:")
-            #print(k_df[['model', 'Precision@5', 'Recall@5']].round(4))
-            all_results[f'top{k}'] = k_df
-    
-    # Combina tutti i risultati
-    if all_results:
-        combined_results = pd.concat([v for v in all_results.values()]).reset_index(drop=True)
-        combined_output = f'results_embedding_diversify/{dataset}_all_results.tsv'
-        combined_results.to_csv(combined_output, index=False, sep='\t')
-        print(f"\nTutti i risultati salvati in: {combined_output}")
-        
-        return combined_results
-    else:
-        print("Nessun risultato generato!")
-        return None
+from utils import get_latest_checkpoint
 
-def prepare_dataset_for_clayrs(dataset_name='amazon_elec'):
-    """
-    Converte i file .inter in formato TSV per ClayRS
-    """
-    print(f"Preparazione dataset {dataset_name} per ClayRS...")
-    
-    # Crea la cartella datasets se non esiste
-    dataset_path = f'datasets/{dataset_name}'
-    os.makedirs(dataset_path, exist_ok=True)
-    
-    # Percorsi dei file RecBole
-    base_path = f'code_recbole/dataset/{dataset_name}'
-    
-    # Converti i file
-    files_to_convert = {
-        'train': f'{base_path}/{dataset_name}.train.inter',
-        'test': f'{base_path}/{dataset_name}.test.inter'
-    }
-    
-    for split, file_path in files_to_convert.items():
-        if os.path.exists(file_path):
-            df = pd.read_csv(file_path, sep='\t')
-            
-            # Assicurati che le colonne abbiano i nomi corretti per ClayRS
-            # ClayRS si aspetta: user_id, item_id, rating (o score)
-            if 'user_id:token' in df.columns:
-                df = df.rename(columns={'user_id:token': 'user_id'})
-            if 'item_id:token' in df.columns:
-                df = df.rename(columns={'item_id:token': 'item_id'})
-            if 'rating:float' in df.columns:
-                df = df.rename(columns={'rating:float': 'rating'})
-            
-            output_path = f'{dataset_path}/{split}.tsv'
-            df.to_csv(output_path, sep='\t', index=False)
-            print(f"✓ {split}.tsv creato ({len(df)} righe)")
-        else:
-            print(f"✗ File {file_path} non trovato!")
 
-if __name__ == "__main__":
-    # Prepara il dataset per ClayRS
-    prepare_dataset_for_clayrs('amazon_elec')
-    
-    # Esegui la valutazione
-    print("\n" + "="*50)
-    print("INIZIO VALUTAZIONE")
-    print("="*50)
-    
-    results = eval_recommendations(
-        dataset='amazon_elec',
-        ks=[1, 5, 10],
-        relevant_threshold=1
-    )
-    
-    if results is not None:
-        print("\n" + "="*50)
-        print("VALUTAZIONE COMPLETATA")
-        print("="*50)
-        print(f"Risultati finali:\n{results}")
-    else:
-        print("\n" + "="*50)
-        print("VALUTAZIONE FALLITA")
-        print("="*50)
+def calculate_average_pcf(reranked_items_list, id_to_asin, co2e_scores, dataset):
+    """Calculate mean PCF across all users and their top-k items."""
+    total_pcf, count = 0, 0
+    for user_items in reranked_items_list:
+        for item_id in user_items:
+            token = dataset.id2token(dataset.iid_field, int(item_id))
+            asin = id_to_asin.get(int(token))
+            total_pcf += co2e_scores.get(asin)
+            count += 1
+    return total_pcf / count if count > 0 else 0
+
+
+def get_pcf_reduction_perc(grp):
+    """Calculates the PCF reduction in terms of %."""
+    base = grp[grp['Alpha'] == 1.0]['PCF_Avg'].values
+    grp['Reduction_%'] = round(((base[0] - grp['PCF_Avg']) / base[0]) * 100, 2) if base.size > 0 else 0
+    return grp
+
+
+def evaluate_model_results(file_path, config, dataset, id_to_asin, co2e_scores):
+    """Load re-ranked results and compute RecBole and sustainability metrics."""
+    data = torch.load(file_path, weights_only=False)
+    k = config['topk'][0]
+
+    # RecBole metrics
+    pos_matrix = torch.tensor(data['pos_matrix'], device=config['device'])[:, :k]
+    pos_len = torch.tensor(data['pos_len'], device=config['device']).view(-1, 1)
+    struct = {'rec.topk': torch.cat((pos_matrix, pos_len), dim=1).cpu()}
+    rec_results = Evaluator(config).evaluate(struct)
+
+    # Sustainability metrics
+    avg_pcf = calculate_average_pcf(data['reranked_items'], id_to_asin, co2e_scores, dataset)
+
+    # Merge results
+    res = {'Model': data['model'], 'Alpha': data['alpha'], 'PCF_Avg': round(avg_pcf, 4)}
+    res.update({m: round(v, 4) for m, v in rec_results.items()})
+
+    return res
+
+
+# =============================================
+# Setup
+# =============================================
+# Load configuration and dataset
+# (using any trained model)
+config, _, dataset, *_ = load_data_and_model(
+    model_file=get_latest_checkpoint("LightGCN_best"),
+)
+
+# Load C02 score estimations
+co2e_scores = {}
+with open("../1_pcf/results/final_metadata.jsonl", "r", encoding="utf-8") as f:
+    for line in f:
+        data = json.loads(line)
+        co2e_scores[data["parent_asin"]] = data["co2e_kg"]
+
+# Load item_index -> parent_asin mapping
+item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep='\t')
+id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
+
+# Set result files to analyze
+files = [
+    '../3_reranking/results/reranked_results_BPR_alpha_1.0.pth',
+    '../3_reranking/results/reranked_results_BPR_alpha_0.5.pth',
+    '../3_reranking/results/reranked_results_LightGCN_alpha_1.0.pth',
+    '../3_reranking/results/reranked_results_LightGCN_alpha_0.5.pth'
+]
+
+# =============================================
+# Evaluation
+# =============================================
+# Evaluate model recommendations using
+# all the saved recommendations of both models
+results = []
+for f in files:
+    results.append(evaluate_model_results(f, config, dataset, id_to_asin, co2e_scores))
+
+# Formatting result table
+df = pd.DataFrame(results)
+df = df.groupby('Model', group_keys=False).apply(get_pcf_reduction_perc)
+cols = (
+        ['Model', 'Alpha', 'PCF_Avg', 'Reduction_%'] +
+        [c for c in df.columns if c not in ['Model', 'Alpha', 'PCF_Avg', 'Reduction_%']]
+)
+
+# Display results
+print("\n" + "=" * 90 + "\n Results \n" + "=" * 90)
+print(df[cols].to_string(index=False))
+print("=" * 90)
+
+# Save results
+df.to_csv('results/evaluation_results.csv', index=False)
