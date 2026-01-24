@@ -11,6 +11,8 @@ from tqdm import tqdm
 from recbole.utils.case_study import full_sort_topk
 from recbole.quick_start import load_data_and_model
 
+from utils import get_latest_checkpoint
+
 
 def pcf_aware_reranker(
         co2e_scores,
@@ -57,7 +59,7 @@ def pcf_aware_reranker(
     return items_np[sorted_indices].copy(), sas_scores[sorted_indices].copy()
 
 
-def get_top_k_recommendations(model, k):
+def get_top_k_recommendations(model, k, config):
     """Retrieves top-k recommendations for all the users, given a trained model."""
     # Setup
     batch_size = 1000
@@ -161,12 +163,12 @@ def get_reranked_top_k_recommendations(
 # Fix alpha for SaS calculation
 ALPHA = 0.5
 
-# Load the best BPR and LightGCN trained models
-config, bpr_model, dataset, *_, test_data = load_data_and_model(
-    model_file='../2_recbole/saved/BPR_best/BPR-Jan-22-2026_21-11-15.pth',
+# Load the latest, best BPR and LightGCN trained models
+bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
+    model_file=get_latest_checkpoint("BPR_best"),
 )
-_, light_gcn_model, *_ = load_data_and_model(
-    model_file='../2_recbole/saved/LightGCN_best/LightGCN-Jan-22-2026_21-18-39.pth'
+light_gcn_config, light_gcn_model, *_ = load_data_and_model(
+    model_file=get_latest_checkpoint("LightGCN_best")
 )
 
 # Load C02 score estimations
@@ -186,11 +188,13 @@ id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
 # Retrieve the standard recommendations using both trained models
 final_scores_bpr, final_iids_bpr = get_top_k_recommendations(
     model=bpr_model,
-    k=100
+    k=100,
+    config=bpr_config
 )
 final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
     model=light_gcn_model,
-    k=100
+    k=100,
+    config=light_gcn_config
 )
 
 # =============================================
@@ -215,7 +219,7 @@ results_to_save = {
     'model': 'BPR',
     'alpha': ALPHA
 }
-torch.save(results_to_save, f'results/reranked_results_BPR_a{ALPHA}.pth')
+torch.save(results_to_save, f'results/reranked_results_BPR_alpha_{ALPHA}.pth')
 
 pos_matrix_list_light_gcn, pos_len_list_light_gcn, reranked_items_list_light_gcn = (
     get_reranked_top_k_recommendations(
@@ -234,4 +238,4 @@ results_to_save = {
     'model': 'LightGCN',
     'alpha': ALPHA
 }
-torch.save(results_to_save, f'results/reranked_results_LightGCN_a{ALPHA}.pth')
+torch.save(results_to_save, f'results/reranked_results_LightGCN_alpha_{ALPHA}.pth')
