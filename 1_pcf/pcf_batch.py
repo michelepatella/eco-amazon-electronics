@@ -22,7 +22,7 @@ def save_results(input_file, output_file):
     # and of the original order they appear
     with open(input_file, 'r') as f:
         input_data = [json.loads(l) for l in f if l.strip()]
-    products_mapping = {d['parent_asin']: d.get('title', 'N/A') for d in input_data}
+    products_mapping = {d['parent_asin']: d.get('title') for d in input_data}
     products_order = [d['parent_asin'] for d in input_data]
 
     # Wait for all the batches being processed
@@ -57,11 +57,11 @@ def save_results(input_file, output_file):
                         }
 
                     all_results[asin] = {
-                        "title": products_mapping.get(asin, "N/A"),
+                        "title": products_mapping.get(asin),
                         "parent_asin": asin,
                         "co2e_kg": pred.get("co2e_kg"),
                         "source": pred.get("source"),
-                        "explanation": pred.get("explanation", "N/A")
+                        "explanation": pred.get("explanation")
                     }
 
                 # Save the response
@@ -123,7 +123,7 @@ def estimate_co2_for_batch_of_products(product_data, llm_model=MODEL):
 
     # Batch request for the API
     batch_request = {
-        "custom_id": product_data.get("parent_asin", "unknown"),
+        "custom_id": product_data.get("parent_asin"),
         "request": {
             "model": f"models/{llm_model}",
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],

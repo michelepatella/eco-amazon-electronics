@@ -70,7 +70,7 @@ def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=1):
 
         try:
             raw_content = response.choices[0].message.content.strip()
-            print(f"\nProcessing product: {product_data.get('title', 'Unknown')[:60]}...")
+            print(f"\nProcessing product: {product_data.get('title')[:60]}...")
 
             # Extract JSON object if there's additional text
             if "{" in raw_content and "}" in raw_content:
@@ -106,12 +106,12 @@ def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=1):
     return json.dumps(last_valid_response)
 
 
-def main(num_rows):
+def main(num_rows, input_file, output_file):
     # Load data from the json
     products = []
 
     # split metadata file into several parts due to the size of the original file
-    with open("metadata_split/meta_3.jsonl", "r", encoding="utf-8") as f:
+    with open(input_file, "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_rows:
                 # this is due to the limits of the API
@@ -120,7 +120,7 @@ def main(num_rows):
             products.append(product)
 
     BATCH_SIZE = 5
-    with open("metadata.json", "w", encoding="utf-8") as out:
+    with open(output_file, "w", encoding="utf-8") as out:
         out.write("[\n")
         first_item = True
 
@@ -140,17 +140,17 @@ def main(num_rows):
                     answer_data = json.loads(llm_answer)
 
                     result = {
-                        "title": product.get("title", "Senza nome"),
-                        "parent_asin": product.get("parent_asin", "Senza ASIN"),
+                        "title": product.get("title"),
+                        "parent_asin": product.get("parent_asin"),
                         "co2e_kg": answer_data.get("co2e_kg"),
                         "source": answer_data.get("source"),
                         "explanation": answer_data.get("explanation")
                     }
 
                 except Exception as e:
-                    print(f"Error processing product {product.get('title', 'Unknown')[:60]}: {e}")
+                    print(f"Error processing product {product.get('title')[:60]}: {e}")
                     result = {
-                        "title": product.get("title", "Senza nome"),
+                        "title": product.get("title"),
                         "co2e_kg": None,
                         "explanation": f"Error processing response: {llm_answer}"
                     }
@@ -177,4 +177,7 @@ def main(num_rows):
 
 
 if __name__ == "__main__":
-    main(num_rows=10000)
+    main(num_rows=10000, input_file="metadata/meta_1.jsonl", output_file="results/meta_1.json")
+    main(num_rows=10000, input_file="metadata/meta_2.jsonl", output_file="results/meta_2.json")
+    main(num_rows=10000, input_file="metadata/meta_3.jsonl", output_file="results/meta_3.json")
+    main(num_rows=10000, input_file="metadata/meta_4.jsonl", output_file="results/meta_4.json")
