@@ -7,13 +7,8 @@ from openai import OpenAI
 
 load_dotenv()
 
-MODEL = "gemini-2.5-flash"
-BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
-client = OpenAI(base_url=BASE_URL, api_key=getenv("GEMINI_API_KEY"))
-
-
-def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=1):
+def estimate_co2_for_product(product_data, llm_model, num_calls=1):
     """
     Example of LLM prompting to predict the CO2eq of a product
     """
@@ -106,7 +101,7 @@ def estimate_co2_for_product(product_data, llm_model=MODEL, num_calls=1):
     return json.dumps(last_valid_response)
 
 
-def main(num_rows, input_file, output_file):
+def main(num_rows, input_file, output_file, model):
     # Load data from the json
     products = []
 
@@ -126,7 +121,7 @@ def main(num_rows, input_file, output_file):
 
         # Parallel execution
         with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
-            futures = {executor.submit(estimate_co2_for_product, p): i for i, p in enumerate(products)}
+            futures = {executor.submit(estimate_co2_for_product, p, model): i for i, p in enumerate(products)}
             results_buffer = [None] * len(products)
             batch_indices = []
 
@@ -176,8 +171,34 @@ def main(num_rows, input_file, output_file):
         out.write("\n]")
 
 
-if __name__ == "__main__":
-    main(num_rows=10000, input_file="metadata/meta_1.jsonl", output_file="results/meta_1.json")
-    main(num_rows=10000, input_file="metadata/meta_2.jsonl", output_file="results/meta_2.json")
-    main(num_rows=10000, input_file="metadata/meta_3.jsonl", output_file="results/meta_3.json")
-    main(num_rows=10000, input_file="metadata/meta_4.jsonl", output_file="results/meta_4.json")
+# =============================================
+# Gemini 2.5 Flash (Real-Time Inference)
+# =============================================
+model = "gemini-2.5-flash"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+client = OpenAI(base_url=base_url, api_key=getenv("GEMINI_API_KEY"))
+
+main(
+    num_rows=10000,
+    input_file="metadata/meta_1.jsonl",
+    output_file="results/meta_1.json",
+    model=model
+)
+main(
+    num_rows=10000,
+    input_file="metadata/meta_2.jsonl",
+    output_file="results/meta_2.json",
+    model=model
+)
+main(
+    num_rows=10000,
+    input_file="metadata/meta_3.jsonl",
+    output_file="results/meta_3.json",
+    model=model
+)
+main(
+    num_rows=10000,
+    input_file="metadata/meta_4.jsonl",
+    output_file="results/meta_4.json",
+    model=model
+)
