@@ -9,8 +9,6 @@ from google.genai import types
 
 # Initialization
 load_dotenv()
-MODEL = "gemini-2.5-flash"
-client = genai.Client(api_key=getenv("GEMINI_API_KEY"))
 
 # Time (in seconds) to wait before
 # checking if any new batch request is succeeded
@@ -80,7 +78,7 @@ def save_results(input_file, output_file):
         time.sleep(CHECK_INTERVAL)
 
 
-def estimate_co2_for_batch_of_products(product_data, llm_model=MODEL):
+def estimate_co2_for_batch_of_products(product_data, llm_model):
     """
     Example of LLM prompting to predict the CO2eq of batch of products
     """
@@ -136,7 +134,14 @@ def estimate_co2_for_batch_of_products(product_data, llm_model=MODEL):
     return json.dumps(batch_request, ensure_ascii=False)
 
 
-def main(start_row, num_rows, input_file, batch_file_name, output_file):
+def main(
+        start_row,
+        num_rows,
+        input_file,
+        batch_file_name,
+        output_file,
+        model
+):
     # Extract products to insert into the batch request
     products = []
     with open(input_file, "r", encoding="utf-8") as f:
@@ -154,7 +159,7 @@ def main(start_row, num_rows, input_file, batch_file_name, output_file):
     print("Creating batch input file...")
     with open(batch_file_name, "w", encoding="utf-8") as f:
         for p in products:
-            f.write(estimate_co2_for_batch_of_products(p) + "\n")
+            f.write(estimate_co2_for_batch_of_products(p, model) + "\n")
     print(f"Batch input file created: {batch_file_name}")
     print("-" * 33)
 
@@ -172,7 +177,7 @@ def main(start_row, num_rows, input_file, batch_file_name, output_file):
     print("-" * 15 + "(3)" + "-" * 15)
     print("Creating batch job...")
     batch_job = client.batches.create(
-        model=f"models/{MODEL}",
+        model=f"models/{model}",
         src=uploaded_file.name
     )
     print("Batch job created:")
@@ -187,5 +192,17 @@ def main(start_row, num_rows, input_file, batch_file_name, output_file):
     print("-" * 33)
 
 
-if __name__ == "__main__":
-    main(start_row=..., num_rows=..., input_file=..., batch_file_name=..., output_file=...)
+# =============================================
+# Gemini 2.5 Flash (Batch Inference)
+# =============================================
+model = "gemini-2.5-flash"
+client = genai.Client(api_key=getenv("GEMINI_API_KEY"))
+
+main(
+    start_row=...,
+    num_rows=...,
+    input_file=...,
+    batch_file_name=...,
+    output_file=...,
+    model=model
+)

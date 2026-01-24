@@ -179,26 +179,8 @@ base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
 client = OpenAI(base_url=base_url, api_key=getenv("GEMINI_API_KEY"))
 
 main(
-    num_rows=10000,
-    input_file="metadata/meta_1.jsonl",
-    output_file="results/meta_1.json",
-    model=model
-)
-main(
-    num_rows=10000,
-    input_file="metadata/meta_2.jsonl",
-    output_file="results/meta_2.json",
-    model=model
-)
-main(
-    num_rows=10000,
-    input_file="metadata/meta_3.jsonl",
-    output_file="results/meta_3.json",
-    model=model
-)
-main(
-    num_rows=10000,
-    input_file="metadata/meta_4.jsonl",
-    output_file="results/meta_4.json",
+    num_rows=...,
+    input_file=...,
+    output_file=...,
     model=model
 )
