@@ -3,4 +3,4 @@
 *.xml
 */*.iml
 *.idea
-/2_recbole/preds/*
+/2_recbole/preds

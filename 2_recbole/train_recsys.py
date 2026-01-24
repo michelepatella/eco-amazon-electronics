@@ -135,20 +135,17 @@ def run_hpo_bpr():
     }
 
     # Run HPO for BPR
-    abs_log_dir = os.path.abspath("./ray_results")
     analysis = tune.run(
         tune.with_parameters(
             train_recbole_hpo,
             model_name='BPR',
             dataset_name='amazon_elec',
-            exp_name='BPR_HPO'
         ),
         metric='recall_10',
         mode='max',
         config=search_space,
         num_samples=10,
         resources_per_trial={'cpu': 4},
-        storage_path=abs_log_dir,
     )
 
     # Get best config for BPR
@@ -173,7 +170,6 @@ def run_hpo_lightgcn():
             train_recbole_hpo,
             model_name='LightGCN',
             dataset_name='amazon_elec',
-            exp_name='LightGCN_HPO'
         ),
         metric='recall_10',
         mode='max',

@@ -39,7 +39,7 @@ for _, row in sorted_dataset.iterrows():
 
 # save maps as tsv files
 map_users_df = pd.DataFrame(list(map_users.items()), columns=['user_id', 'user_index'])
-map_users_df.to_csv('user_map.tsv', sep='\t', index=False)
+map_users_df.to_csv('maps/user_map.tsv', sep='\t', index=False)
 
 
 # add parent_asin al mapping degli item
@@ -49,7 +49,7 @@ for item_id, item_index in map_items.items():
     map_items_data.append((item_id, item_index, parent_asin))
 
 map_items_df = pd.DataFrame(map_items_data, columns=['item_id', 'item_index', 'parent_asin'])
-map_items_df.to_csv('item_map.tsv', sep='\t', index=False)
+map_items_df.to_csv('maps/item_map.tsv', sep='\t', index=False)
 
 # build interaction tuples (user_id, item_id, binary rating)
 ratings = []
