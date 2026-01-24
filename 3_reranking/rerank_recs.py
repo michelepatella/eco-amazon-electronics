@@ -6,7 +6,6 @@ import numpy as np
 import math
 from collections import defaultdict
 
-from recbole.evaluator import Evaluator
 from tqdm import tqdm
 
 from recbole.utils.case_study import full_sort_topk
@@ -159,6 +158,9 @@ def get_reranked_top_k_recommendations(
 # =============================================
 # Setup
 # =============================================
+# Fix alpha for SaS calculation
+ALPHA = 0.5
+
 # Load the best BPR and LightGCN trained models
 config, bpr_model, dataset, *_, test_data = load_data_and_model(
     model_file='../2_recbole/saved/BPR_best/BPR-Jan-22-2026_21-11-15.pth',
@@ -194,24 +196,42 @@ final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
 # =============================================
 # PCF-aware recommendations
 # =============================================
-# Re-rank standard recommendations taking care about PCF
-pos_matrix_list_bpr, pos_len_list_bpr, _ = (
+# Re-rank standard recommendations taking care
+# about PCF and save results
+pos_matrix_list_bpr, pos_len_list_bpr, reranked_items_list_bpr = (
     get_reranked_top_k_recommendations(
         final_scores=final_scores_bpr,
         final_iids=final_iids_bpr,
         id_to_asin=id_to_asin,
         co2e_scores=co2e_scores,
-        alpha=0.5,
+        alpha=ALPHA,
         k=10
     )
 )
-pos_matrix_list_light_gcn, pos_len_list_light_gcn, _ = (
+results_to_save = {
+    'pos_matrix': pos_matrix_list_bpr,
+    'pos_len': pos_len_list_bpr,
+    'reranked_items': reranked_items_list_bpr,
+    'model': 'BPR',
+    'alpha': ALPHA
+}
+torch.save(results_to_save, f'results/reranked_results_BPR_a{ALPHA}.pth')
+
+pos_matrix_list_light_gcn, pos_len_list_light_gcn, reranked_items_list_light_gcn = (
     get_reranked_top_k_recommendations(
         final_scores=final_scores_light_gcn,
         final_iids=final_iids_light_gcn,
         id_to_asin=id_to_asin,
         co2e_scores=co2e_scores,
-        alpha=0.5,
+        alpha=ALPHA,
         k=10
     )
 )
+results_to_save = {
+    'pos_matrix': pos_matrix_list_light_gcn,
+    'pos_len': pos_len_list_light_gcn,
+    'reranked_items': reranked_items_list_light_gcn,
+    'model': 'LightGCN',
+    'alpha': ALPHA
+}
+torch.save(results_to_save, f'results/reranked_results_LightGCN_a{ALPHA}.pth')
