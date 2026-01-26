@@ -173,7 +173,7 @@ light_gcn_config, light_gcn_model, *_ = load_data_and_model(
 
 # Load C02 score estimations
 co2e_scores = {}
-with open("../1_pcf/results/final_metadata.jsonl", "r", encoding="utf-8") as f:
+with open("../1_pcf/full_results/final_metadata.jsonl", "r", encoding="utf-8") as f:
     for line in f:
         data = json.loads(line)
         co2e_scores[data["parent_asin"]] = data["co2e_kg"]

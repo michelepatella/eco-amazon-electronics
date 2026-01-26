@@ -2,6 +2,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from os import getenv
 
+import numpy as np
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -93,9 +94,10 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=1):
             "explanation": "Error: no valid response provided by the model."
         })
 
-    # Average co2e (kg) values across all the
-    # provided responses for the current item
-    avg_value = sum(values) / len(values)
+    # Apply distance-based weighting from the median to
+    # mitigate the impact of outliers in LLM estimations
+    weights = 1.0 / (np.abs(np.array(values) - np.median(np.array(values))) + 1e-5)
+    avg_value = np.average(np.array(values), weights=weights)
     last_valid_response["co2e_kg"] = avg_value
 
     return json.dumps(last_valid_response)
