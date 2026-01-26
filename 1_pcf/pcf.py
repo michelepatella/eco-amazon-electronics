@@ -54,10 +54,10 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
     last_valid_response = None
 
     for _ in range(num_calls):
+        # temperature=0.0
         response = client.chat.completions.create(
             model=llm_model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.0
         )
         print(response)
         if not response or not response.choices:
@@ -174,15 +174,15 @@ def main(num_rows, input_file, output_file, model):
 
 
 # =============================================
-# Gemini 2.5 Flash (Real-Time Inference)
+# GPT-o3-mini (Real-time Inference)
 # =============================================
-model = "gemini-2.5-flash"
-base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
-client = OpenAI(base_url=base_url, api_key=getenv("GEMINI_API_KEY"))
+model = "o3-mini"
+#base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+client = OpenAI(api_key=getenv("OPENAI_API_KEY"))
 
 main(
     num_rows=100,
     input_file="few_metadata/candidate_items.jsonl",
-    output_file="few_results/gemini_2.5_flash_results.json",
+    output_file="few_results/gpt_o3_mini_results.json",
     model=model
 )
