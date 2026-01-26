@@ -22,7 +22,7 @@ def calculate_average_pcf(reranked_items_list, id_to_asin, co2e_scores, dataset)
 def get_pcf_reduction_perc(grp):
     """Calculates the PCF reduction in terms of %."""
     base = grp[grp['Alpha'] == 1.0]['PCF_Avg'].values
-    grp['Reduction_%'] = round(((base[0] - grp['PCF_Avg']) / base[0]) * 100, 2) if base.size > 0 else 0
+    grp['PCF_Avg_Reduction_%'] = round(((base[0] - grp['PCF_Avg']) / base[0]) * 100, 2) if base.size > 0 else 0
     return grp
 
 
@@ -70,9 +70,13 @@ id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
 # Set result files to analyze
 files = [
     '../3_reranking/results/reranked_results_BPR_alpha_1.0.pth',
+    '../3_reranking/results/reranked_results_BPR_alpha_0.75.pth',
     '../3_reranking/results/reranked_results_BPR_alpha_0.5.pth',
+    '../3_reranking/results/reranked_results_BPR_alpha_0.25.pth',
     '../3_reranking/results/reranked_results_LightGCN_alpha_1.0.pth',
-    '../3_reranking/results/reranked_results_LightGCN_alpha_0.5.pth'
+    '../3_reranking/results/reranked_results_LightGCN_alpha_0.75.pth',
+    '../3_reranking/results/reranked_results_LightGCN_alpha_0.5.pth',
+    '../3_reranking/results/reranked_results_LightGCN_alpha_0.25.pth',
 ]
 
 # =============================================
@@ -89,7 +93,7 @@ df = pd.DataFrame(results)
 df = df.groupby('Model', group_keys=False).apply(get_pcf_reduction_perc)
 cols = (
         ['Model', 'Alpha', 'PCF_Avg', 'PCF_Avg_Reduction_%'] +
-        [c for c in df.columns if c not in ['Model', 'Alpha', 'PCF_Avg', 'Reduction_%']]
+        [c for c in df.columns if c not in ['Model', 'Alpha', 'PCF_Avg', 'PCF_Avg_Reduction_%']]
 )
 
 # Display results

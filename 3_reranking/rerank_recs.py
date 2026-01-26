@@ -161,7 +161,7 @@ def get_reranked_top_k_recommendations(
 # Setup
 # =============================================
 # Fix alpha for SaS calculation
-ALPHA = 0.5
+ALPHA = 0.25
 
 # Load the latest, best BPR and LightGCN trained models
 bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
