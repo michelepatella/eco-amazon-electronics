@@ -9,7 +9,7 @@ from openai import OpenAI
 load_dotenv()
 
 
-def estimate_co2_for_product(product_data, llm_model, num_calls=1):
+def estimate_co2_for_product(product_data, llm_model, num_calls=4):
     """
     Example of LLM prompting to predict the CO2eq of a product
     """
@@ -181,8 +181,8 @@ base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
 client = OpenAI(base_url=base_url, api_key=getenv("GEMINI_API_KEY"))
 
 main(
-    num_rows=...,
-    input_file=...,
-    output_file=...,
+    num_rows=100,
+    input_file="few_metadata/candidate_items.jsonl",
+    output_file="few_results/gemini_2.5_flash_results.json",
     model=model
 )
