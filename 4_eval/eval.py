@@ -88,7 +88,7 @@ for f in files:
 df = pd.DataFrame(results)
 df = df.groupby('Model', group_keys=False).apply(get_pcf_reduction_perc)
 cols = (
-        ['Model', 'Alpha', 'PCF_Avg', 'Reduction_%'] +
+        ['Model', 'Alpha', 'PCF_Avg', 'PCF_Avg_Reduction_%'] +
         [c for c in df.columns if c not in ['Model', 'Alpha', 'PCF_Avg', 'Reduction_%']]
 )
 
