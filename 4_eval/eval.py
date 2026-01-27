@@ -63,6 +63,9 @@ def evaluate_model_results(file_path, config, dataset, id_to_asin, co2e_scores, 
 # =============================================
 # Setup
 # =============================================
+# Fix model
+model_tag = "gpt_o3_mini"
+
 # Load configuration and dataset
 config, _, dataset, *_ = load_data_and_model(
     model_file=get_latest_checkpoint("LightGCN_best"),
@@ -78,7 +81,7 @@ gt_pcf = {
 
 # Load C02 score estimations (LLM)
 co2e_scores = {}
-llm_file = "../1_pcf/few_results/gpt_o3_mini_results.json"
+llm_file = f"../1_pcf/few_results/{model_tag}_results.json"
 with open(llm_file, "r", encoding="utf-8") as f:
     data_list = json.load(f)
     for data in data_list:
@@ -91,20 +94,20 @@ id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
 
 # Set result files to analyze
 files = [
-    '../3_reranking/few_results/reranked_results_BPR_alpha_1.0_gpt_o3_mini.pth',
-    '../3_reranking/few_results/reranked_results_BPR_alpha_0.75_gpt_o3_mini.pth',
-    '../3_reranking/few_results/reranked_results_BPR_alpha_0.5_gpt_o3_mini.pth',
-    '../3_reranking/few_results/reranked_results_BPR_alpha_0.25_gpt_o3_mini.pth',
-    '../3_reranking/few_results/reranked_results_LightGCN_alpha_1.0_gpt_o3_mini.pth',
-    '../3_reranking/few_results/reranked_results_LightGCN_alpha_0.75_gpt_o3_mini.pth',
-    '../3_reranking/few_results/reranked_results_LightGCN_alpha_0.5_gpt_o3_mini.pth',
-    '../3_reranking/few_results/reranked_results_LightGCN_alpha_0.25_gpt_o3_mini.pth',
+    f'../3_reranking/few_results/reranked_results_BPR_alpha_1.0_{model_tag}.pth',
+    f'../3_reranking/few_results/reranked_results_BPR_alpha_0.75_{model_tag}.pth',
+    f'../3_reranking/few_results/reranked_results_BPR_alpha_0.5_{model_tag}.pth',
+    f'../3_reranking/few_results/reranked_results_BPR_alpha_0.25_{model_tag}.pth',
+    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_1.0_{model_tag}.pth',
+    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_0.75_{model_tag}.pth',
+    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_0.5_{model_tag}.pth',
+    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_0.25_{model_tag}.pth',
 ]
 
 # =============================================
 # Evaluation
 # =============================================
-# 1. Calculate LLM Estimation Errors
+# 1. Calculate and save LLM Estimation Errors
 common_asins = [a for a in gt_pcf if a in co2e_scores]
 y_true = [gt_pcf[a] for a in common_asins]
 y_pred = [co2e_scores[a] for a in common_asins]
@@ -112,8 +115,19 @@ y_pred = [co2e_scores[a] for a in common_asins]
 mae = np.mean(np.abs(np.array(y_true) - np.array(y_pred)))
 rmse = np.sqrt(np.mean((np.array(y_true) - np.array(y_pred)) ** 2))
 
+error_metrics = {
+    "model": model_tag,
+    "mae": round(float(mae), 4),
+    "rmse": round(float(rmse), 4),
+    "n_samples": len(common_asins)
+}
+
+# Save errors
+with open(f'few_results/{model_tag}_error_metrics.json', 'w') as f:
+    json.dump(error_metrics, f, indent=4)
+
 print("\n" + "=" * 50)
-print(f" LLM Estimation Error")
+print(f" LLM Estimation Error ({model_tag})")
 print(f" MAE: {mae:.4f} kg")
 print(f" RMSE: {rmse:.4f} kg")
 print("=" * 50)
@@ -140,4 +154,4 @@ print(df[cols].to_string(index=False))
 print("=" * 150)
 
 # Save results
-df.to_csv('few_results/gpt_o3_mini_evaluation_results.csv', index=False)
+df.to_csv(f'few_results/{model_tag}_evaluation_results.csv', index=False)
