@@ -32,14 +32,15 @@ def pcf_aware_reranker(
         external_items.append(asin)
 
     # Retrieve PCF values
-    pcf_values = [co2e_scores.get(asin) for asin in external_items]
+    pcf_values = [co2e_scores.get(asin, DEFAULT_PCF) for asin in external_items]
     pcf_array = np.array(pcf_values)
 
     # Normalize PCF values
     max_pcf, min_pcf = pcf_array.max(), pcf_array.min()
-    pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf) \
-        if max_pcf > min_pcf \
-        else np.zeros_like(pcf_array)
+    if max_pcf > min_pcf:
+        pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf)
+    else:
+        pcf_norm = np.full_like(pcf_array, 0.5)
 
     # Normalize predictions
     preds = np.array(score_list)
@@ -161,7 +162,7 @@ def get_reranked_top_k_recommendations(
 # Setup
 # =============================================
 # Fix alpha for SaS calculation
-ALPHA = 0.25
+ALPHA = 1.0
 
 # Load the latest, best BPR and LightGCN trained models
 bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
@@ -173,10 +174,17 @@ light_gcn_config, light_gcn_model, *_ = load_data_and_model(
 
 # Load C02 score estimations
 co2e_scores = {}
-with open("../1_pcf/full_results/final_metadata.jsonl", "r", encoding="utf-8") as f:
-    for line in f:
-        data = json.loads(line)
-        co2e_scores[data["parent_asin"]] = data["co2e_kg"]
+with open("../1_pcf/few_results/gpt_o3_mini_results.json", "r", encoding="utf-8") as f:
+    data_list = json.load(f)
+    for data in data_list:
+        if data.get("co2e_kg") is not None:
+            co2e_scores[data["parent_asin"]] = data["co2e_kg"]
+
+# Default value for all the
+# other items which have not
+# received any PCF estimation
+if co2e_scores:
+    DEFAULT_PCF = sum(co2e_scores.values()) / len(co2e_scores)
 
 # Load item_index -> parent_asin mapping
 item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep='\t')
@@ -219,7 +227,7 @@ results_to_save = {
     'model': 'BPR',
     'alpha': ALPHA
 }
-torch.save(results_to_save, f'results/reranked_results_BPR_alpha_{ALPHA}.pth')
+torch.save(results_to_save, f'few_results/reranked_results_BPR_alpha_{ALPHA}_gpt_o3_mini.pth')
 
 pos_matrix_list_light_gcn, pos_len_list_light_gcn, reranked_items_list_light_gcn = (
     get_reranked_top_k_recommendations(
@@ -238,4 +246,4 @@ results_to_save = {
     'model': 'LightGCN',
     'alpha': ALPHA
 }
-torch.save(results_to_save, f'results/reranked_results_LightGCN_alpha_{ALPHA}.pth')
+torch.save(results_to_save, f'few_results/reranked_results_LightGCN_alpha_{ALPHA}_gpt_o3_mini.pth')

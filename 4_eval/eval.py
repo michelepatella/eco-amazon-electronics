@@ -9,12 +9,15 @@ from utils import get_latest_checkpoint
 
 def calculate_average_pcf(reranked_items_list, id_to_asin, co2e_scores, dataset):
     """Calculate mean PCF across all users and their top-k items."""
+    vals = [v for v in co2e_scores.values() if v is not None]
+    default_val = sum(vals) / len(vals) if vals else 0
     total_pcf, count = 0, 0
     for user_items in reranked_items_list:
         for item_id in user_items:
             token = dataset.id2token(dataset.iid_field, int(item_id))
             asin = id_to_asin.get(int(token))
-            total_pcf += co2e_scores.get(asin)
+            pcf = co2e_scores.get(asin, default_val)
+            total_pcf += pcf
             count += 1
     return total_pcf / count if count > 0 else 0
 
@@ -58,10 +61,11 @@ config, _, dataset, *_ = load_data_and_model(
 
 # Load C02 score estimations
 co2e_scores = {}
-with open("../1_pcf/full_results/final_metadata.jsonl", "r", encoding="utf-8") as f:
-    for line in f:
-        data = json.loads(line)
-        co2e_scores[data["parent_asin"]] = data["co2e_kg"]
+with open("../1_pcf/few_results/gpt_o3_mini_results.json", "r", encoding="utf-8") as f:
+    data_list = json.load(f)
+    for data in data_list:
+        if data.get("co2e_kg") is not None:
+            co2e_scores[data["parent_asin"]] = data["co2e_kg"]
 
 # Load item_index -> parent_asin mapping
 item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep='\t')
@@ -69,14 +73,14 @@ id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
 
 # Set result files to analyze
 files = [
-    '../3_reranking/results/reranked_results_BPR_alpha_1.0.pth',
-    '../3_reranking/results/reranked_results_BPR_alpha_0.75.pth',
-    '../3_reranking/results/reranked_results_BPR_alpha_0.5.pth',
-    '../3_reranking/results/reranked_results_BPR_alpha_0.25.pth',
-    '../3_reranking/results/reranked_results_LightGCN_alpha_1.0.pth',
-    '../3_reranking/results/reranked_results_LightGCN_alpha_0.75.pth',
-    '../3_reranking/results/reranked_results_LightGCN_alpha_0.5.pth',
-    '../3_reranking/results/reranked_results_LightGCN_alpha_0.25.pth',
+    '../3_reranking/few_results/reranked_results_BPR_alpha_1.0_gpt_o3_mini.pth',
+    '../3_reranking/few_results/reranked_results_BPR_alpha_0.75_gpt_o3_mini.pth',
+    '../3_reranking/few_results/reranked_results_BPR_alpha_0.5_gpt_o3_mini.pth',
+    '../3_reranking/few_results/reranked_results_BPR_alpha_0.25_gpt_o3_mini.pth',
+    '../3_reranking/few_results/reranked_results_LightGCN_alpha_1.0_gpt_o3_mini.pth',
+    '../3_reranking/few_results/reranked_results_LightGCN_alpha_0.75_gpt_o3_mini.pth',
+    '../3_reranking/few_results/reranked_results_LightGCN_alpha_0.5_gpt_o3_mini.pth',
+    '../3_reranking/few_results/reranked_results_LightGCN_alpha_0.25_gpt_o3_mini.pth',
 ]
 
 # =============================================
@@ -97,9 +101,9 @@ cols = (
 )
 
 # Display results
-print("\n" + "=" * 90 + "\n Results \n" + "=" * 90)
+print("\n" + "=" * 100 + "\n Results \n" + "=" * 100)
 print(df[cols].to_string(index=False))
-print("=" * 90)
+print("=" * 100)
 
 # Save results
-df.to_csv('results/evaluation_results.csv', index=False)
+df.to_csv('few_results/gpt_o3_mini_evaluation_results.csv', index=False)

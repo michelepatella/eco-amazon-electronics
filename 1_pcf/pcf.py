@@ -182,7 +182,7 @@ client = OpenAI(api_key=getenv("OPENAI_API_KEY"))
 
 main(
     num_rows=100,
-    input_file="few_metadata/candidate_items.jsonl",
+    input_file="few_metadata/metadata.jsonl",
     output_file="few_results/gpt_o3_mini_results.json",
     model=model
 )
