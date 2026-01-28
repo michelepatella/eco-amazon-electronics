@@ -42,11 +42,12 @@ def evaluate_model_results(file_path, config, dataset, id_to_asin, co2e_scores, 
     struct = {'rec.topk': torch.cat((pos_matrix, pos_len), dim=1).cpu()}
     rec_results = Evaluator(config).evaluate(struct)
 
-    # Sustainability metrics (estimated by LLM)
-    avg_pcf_est = calculate_average_pcf(data['reranked_items'], id_to_asin, co2e_scores, dataset)
+    # Get top-k items
+    top_k_items = [user_list[:k] for user_list in data['reranked_items']]
 
-    # Sustainability metrics (ground truth)
-    avg_pcf_real = calculate_average_pcf(data['reranked_items'], id_to_asin, gt_pcf, dataset)
+    # Sustainability metrics
+    avg_pcf_est = calculate_average_pcf(top_k_items, id_to_asin, co2e_scores, dataset)
+    avg_pcf_real = calculate_average_pcf(top_k_items, id_to_asin, gt_pcf, dataset)
 
     # Merge results
     res = {
