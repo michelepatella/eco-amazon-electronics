@@ -65,7 +65,8 @@ def evaluate_model_results(file_path, config, dataset, id_to_asin, co2e_scores, 
 # Setup
 # =============================================
 # Fix model
-model_tag = "gpt_o3_mini"
+# model_tag = "gemini-2_5-flash"
+model_tag = "gpt-o3-mini"
 
 # Load configuration and dataset
 config, _, dataset, *_ = load_data_and_model(
@@ -74,7 +75,7 @@ config, _, dataset, *_ = load_data_and_model(
 
 # Ground Truth CO2 values
 gt_pcf = {}
-gt_pcf_file = "../1_pcf/few_metadata/ground_truth.jsonl"
+gt_pcf_file = "../1_pcf/subset/metadata/ground_truth.jsonl"
 with open(gt_pcf_file, "r", encoding="utf-8") as f:
     for line in f:
         if line.strip():
@@ -83,7 +84,7 @@ with open(gt_pcf_file, "r", encoding="utf-8") as f:
 
 # Load C02 score estimations (LLM)
 co2e_scores = {}
-llm_file = f"../1_pcf/few_results/{model_tag}_results.json"
+llm_file = f"../1_pcf/subset/results/{model_tag}_results.json"
 with open(llm_file, "r", encoding="utf-8") as f:
     data_list = json.load(f)
     for data in data_list:
@@ -96,50 +97,49 @@ id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
 
 # Set result files to analyze
 files = [
-    f'../3_reranking/few_results/reranked_results_BPR_alpha_1.0_{model_tag}.pth',
-    f'../3_reranking/few_results/reranked_results_BPR_alpha_0.75_{model_tag}.pth',
-    f'../3_reranking/few_results/reranked_results_BPR_alpha_0.5_{model_tag}.pth',
-    f'../3_reranking/few_results/reranked_results_BPR_alpha_0.25_{model_tag}.pth',
-    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_1.0_{model_tag}.pth',
-    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_0.75_{model_tag}.pth',
-    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_0.5_{model_tag}.pth',
-    f'../3_reranking/few_results/reranked_results_LightGCN_alpha_0.25_{model_tag}.pth',
+    f'../3_reranking/results/subset/BPR/{model_tag}/results_alpha_0.25.pth',
+    f'../3_reranking/results/subset/BPR/{model_tag}/results_alpha_0.5.pth',
+    f'../3_reranking/results/subset/BPR/{model_tag}/results_alpha_0.75.pth',
+    f'../3_reranking/results/subset/BPR/{model_tag}/results_alpha_1.0.pth',
+    f'../3_reranking/results/subset/LightGCN/{model_tag}/results_alpha_0.25.pth',
+    f'../3_reranking/results/subset/LightGCN/{model_tag}/results_alpha_0.5.pth',
+    f'../3_reranking/results/subset/LightGCN/{model_tag}/results_alpha_0.75.pth',
+    f'../3_reranking/results/subset/LightGCN/{model_tag}/results_alpha_1.0.pth',
 ]
 
 # =============================================
 # Evaluation
 # =============================================
-# 1. Calculate and save LLM Estimation Errors
+# Calculate and save LLM Estimation Errors
 common_asins = [a for a in gt_pcf if a in co2e_scores]
 y_true = [gt_pcf[a] for a in common_asins]
 y_pred = [co2e_scores[a] for a in common_asins]
-
 mae = np.mean(np.abs(np.array(y_true) - np.array(y_pred)))
 rmse = np.sqrt(np.mean((np.array(y_true) - np.array(y_pred)) ** 2))
 
+# Save errors
 error_metrics = {
     "model": model_tag,
     "mae": round(float(mae), 4),
     "rmse": round(float(rmse), 4),
     "n_samples": len(common_asins)
 }
-
-# Save errors
-with open(f'few_results/{model_tag}_error_metrics.json', 'w') as f:
+with open(f'results/subset/{model_tag}/pcf_error.json', 'w') as f:
     json.dump(error_metrics, f, indent=4)
 
+# Display results
 print("\n" + "=" * 50)
 print(f" LLM Estimation Error ({model_tag})")
 print(f" MAE: {mae:.4f} kg")
 print(f" RMSE: {rmse:.4f} kg")
 print("=" * 50)
 
-# 2. Evaluate model recommendations
+# Evaluate model recommendations
 results = []
 for f in files:
     results.append(evaluate_model_results(f, config, dataset, id_to_asin, co2e_scores, gt_pcf))
 
-# Formatting result table
+# Format result table
 df = pd.DataFrame(results)
 df = df.groupby('Model', group_keys=False).apply(lambda x: get_pcf_reduction_perc(x, 'PCF_Est'))
 df = df.groupby('Model', group_keys=False).apply(lambda x: get_pcf_reduction_perc(x, 'PCF_Real'))
@@ -156,4 +156,4 @@ print(df[cols].to_string(index=False))
 print("=" * 120)
 
 # Save results
-df[cols].to_csv(f'few_results/{model_tag}_evaluation_results.csv', index=False)
+df[cols].to_csv(f'results/subset/{model_tag}/evaluation_results.csv', index=False)

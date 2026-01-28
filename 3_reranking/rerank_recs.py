@@ -40,6 +40,7 @@ def pcf_aware_reranker(
     if max_pcf > min_pcf:
         pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf)
     else:
+        # Neutral PCF if not present
         pcf_norm = np.full_like(pcf_array, 0.5)
 
     # Normalize predictions
@@ -162,9 +163,11 @@ def get_reranked_top_k_recommendations(
 # Setup
 # =============================================
 # Fix alpha for SaS calculation
+# ALPHA = 0.25, 0.5, 0.75, 1.0
 ALPHA = 1.0
 
-model_tag = "gpt_o3_mini"
+# model_tag = "gemini-2_5-flash"
+model_tag = "gpt-o3-mini"
 
 # Load the latest, best BPR and LightGCN trained models
 bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
@@ -176,7 +179,7 @@ light_gcn_config, light_gcn_model, *_ = load_data_and_model(
 
 # Load C02 score estimations
 co2e_scores = {}
-with open(f"../1_pcf/few_results/{model_tag}_results.json", "r", encoding="utf-8") as f:
+with open(f"../1_pcf/subset/results/{model_tag}_results.json", "r", encoding="utf-8") as f:
     data_list = json.load(f)
     for data in data_list:
         if data.get("co2e_kg") is not None:
@@ -229,7 +232,7 @@ results_to_save = {
     'model': 'BPR',
     'alpha': ALPHA
 }
-torch.save(results_to_save, f'few_results/reranked_results_BPR_alpha_{ALPHA}_{model_tag}.pth')
+torch.save(results_to_save, f'results/subset/BPR/{model_tag}/results_alpha_{ALPHA}.pth')
 
 pos_matrix_list_light_gcn, pos_len_list_light_gcn, reranked_items_list_light_gcn = (
     get_reranked_top_k_recommendations(
@@ -248,4 +251,4 @@ results_to_save = {
     'model': 'LightGCN',
     'alpha': ALPHA
 }
-torch.save(results_to_save, f'few_results/reranked_results_LightGCN_alpha_{ALPHA}_{model_tag}.pth')
+torch.save(results_to_save, f'results/subset/LightGCN/{model_tag}/results_alpha_{ALPHA}.pth')

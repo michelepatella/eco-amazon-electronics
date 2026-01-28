@@ -176,13 +176,16 @@ def main(num_rows, input_file, output_file, model):
 # =============================================
 # GPT-o3-mini (Real-time Inference)
 # =============================================
+# model = "gemini-2.5-flash"
 model = "o3-mini"
-#base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+# base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+# client = OpenAI(base_url=base_url, api_key=getenv("GEMINI_API_KEY"))
 client = OpenAI(api_key=getenv("OPENAI_API_KEY"))
 
 main(
     num_rows=100,
-    input_file="few_metadata/metadata.jsonl",
-    output_file="few_results/gpt_o3_mini_results.json",
+    input_file=...,
+    output_file=...,
     model=model
 )
