@@ -73,12 +73,13 @@ config, _, dataset, *_ = load_data_and_model(
 )
 
 # Ground Truth CO2 values
-gt_pcf = {
-    "B0BLHNNSGG": 10.78, "B0148NPAT0": 5.98, "B00L1Y11D4": 8.21,
-    "B0B35JDFPL": 11.14, "B01LZAK8MM": 9.48, "B0BVBDXFHM": 7.93,
-    "B0BK3LYMR2": 7.80, "B01AROOL12": 8.05, "B0BVZZ36ZL": 1.73,
-    "B0BMVBQZ9T": 4.07
-}
+gt_pcf = {}
+gt_pcf_file = "../1_pcf/few_metadata/ground_truth.jsonl"
+with open(gt_pcf_file, "r", encoding="utf-8") as f:
+    for line in f:
+        if line.strip():
+            item_data = json.loads(line)
+            gt_pcf[item_data["parent_asin"]] = item_data["co2e_kg"]
 
 # Load C02 score estimations (LLM)
 co2e_scores = {}
