@@ -143,15 +143,15 @@ df = df.groupby('Model', group_keys=False).apply(lambda x: get_pcf_reduction_per
 df = df.groupby('Model', group_keys=False).apply(lambda x: get_pcf_reduction_perc(x, 'PCF_Real'))
 
 cols = (
-        ['Model', 'Alpha', 'PCF_Est', 'PCF_Est_Reduction_%', 'PCF_Real', 'PCF_Real_Reduction_%'] +
+        ['Model', 'Alpha', 'PCF_Est_Reduction_%', 'PCF_Real_Reduction_%'] +
         [c for c in df.columns if
          c not in ['Model', 'Alpha', 'PCF_Est', 'PCF_Est_Reduction_%', 'PCF_Real', 'PCF_Real_Reduction_%']]
 )
 
 # Display results
-print("\n" + "=" * 150 + "\n Results \n" + "=" * 150)
+print("\n" + "=" * 120 + "\n Results \n" + "=" * 120)
 print(df[cols].to_string(index=False))
-print("=" * 150)
+print("=" * 120)
 
 # Save results
-df.to_csv(f'few_results/{model_tag}_evaluation_results.csv', index=False)
+df[cols].to_csv(f'few_results/{model_tag}_evaluation_results.csv', index=False)
