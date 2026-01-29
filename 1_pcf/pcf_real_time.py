@@ -75,7 +75,7 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
                 raw_content = raw_content[start:end]
 
             # Clean any remaining newlines or extra spaces
-            clean_content = raw_content.replace('\n', ' ').strip()
+            clean_content = raw_content.replace("\n", " ").strip()
 
             # Validate JSON before returning
             parsed = json.loads(clean_content)  # Test if it's valid JSON
@@ -89,10 +89,12 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
             continue
 
     if not values:
-        return json.dumps({
-            "co2e_kg": None,
-            "explanation": "Error: no valid response provided by the model."
-        })
+        return json.dumps(
+            {
+                "co2e_kg": None,
+                "explanation": "Error: no valid response provided by the model.",
+            }
+        )
 
     # Apply distance-based weighting from the median to
     # mitigate the impact of outliers in LLM estimations
@@ -123,7 +125,10 @@ def main(num_rows, input_file, output_file, model):
 
         # Parallel execution
         with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
-            futures = {executor.submit(estimate_co2_for_product, p, model): i for i, p in enumerate(products)}
+            futures = {
+                executor.submit(estimate_co2_for_product, p, model): i
+                for i, p in enumerate(products)
+            }
             results_buffer = [None] * len(products)
             batch_indices = []
 
@@ -141,7 +146,7 @@ def main(num_rows, input_file, output_file, model):
                         "parent_asin": product.get("parent_asin"),
                         "co2e_kg": answer_data.get("co2e_kg"),
                         "source": answer_data.get("source"),
-                        "explanation": answer_data.get("explanation")
+                        "explanation": answer_data.get("explanation"),
                     }
 
                 except Exception as e:
@@ -149,7 +154,7 @@ def main(num_rows, input_file, output_file, model):
                     result = {
                         "title": product.get("title"),
                         "co2e_kg": None,
-                        "explanation": f"Error processing response: {llm_answer}"
+                        "explanation": f"Error processing response: {llm_answer}",
                     }
 
                 results_buffer[idx] = result
@@ -173,19 +178,28 @@ def main(num_rows, input_file, output_file, model):
         out.write("\n]")
 
 
-# =============================================
-# GPT-o3-mini (Real-time Inference)
-# =============================================
-# model = "gemini-2.5-flash"
-model = "o3-mini"
+# ====================================
+# Real-time Inference (Gemini or GPT)
+# ====================================
+# "o3-mini" or "gemini-2.5-flash"
+model = ...
 
-# base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
-# client = OpenAI(base_url=base_url, api_key=getenv("GEMINI_API_KEY"))
-client = OpenAI(api_key=getenv("OPENAI_API_KEY"))
+client = OpenAI(
+    # "OPENAI_API_KEY" or "GEMINI_API_KEY"
+    api_key=getenv(...)
+    # base_url="https://generativelanguage.googleapis.com/v1beta/openai/" for gemini-2.5-flash
+)
 
 main(
-    num_rows=100,
+    # Very high number
+    num_rows=10000,
+    # "metadata/subset/metadata.jsonl" or "metadata/full/meta_<number>.jsonl"
+    # for partial (experiment 1) or full (experiment 2)
+    # co2e_kg extraction, respectively
     input_file=...,
+    # "results/subset/{model}/results.json" or "results/full/{model}/results.jsonl"
+    # for partial (experiment 1) or full (experiment 2) saving of co2e_kg extraction
+    # results, respectively
     output_file=...,
-    model=model
+    model=model,
 )

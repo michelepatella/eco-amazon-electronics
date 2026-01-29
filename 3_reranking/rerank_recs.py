@@ -15,12 +15,7 @@ from utils import get_latest_checkpoint
 
 
 def pcf_aware_reranker(
-        co2e_scores,
-        item_list_internal,
-        score_list,
-        dataset,
-        id_to_asin,
-        alpha
+    co2e_scores, item_list_internal, score_list, dataset, id_to_asin, alpha
 ):
     """Calculates PCF-aware to re-rank recommendations."""
     # Retrieve tokens
@@ -45,18 +40,22 @@ def pcf_aware_reranker(
 
     # Normalize predictions
     preds = np.array(score_list)
-    preds_norm = (preds - preds.min()) / (preds.max() - preds.min()) \
-        if preds.max() > preds.min() \
+    preds_norm = (
+        (preds - preds.min()) / (preds.max() - preds.min())
+        if preds.max() > preds.min()
         else np.zeros_like(preds)
+    )
 
     # Calculate SaS
     sas_scores = alpha * preds_norm + (1 - alpha) * pcf_norm
 
     # Sort items by SaS descending
     sorted_indices = np.argsort(sas_scores)[::-1]
-    items_np = item_list_internal.cpu().numpy() \
-        if torch.is_tensor(item_list_internal) \
+    items_np = (
+        item_list_internal.cpu().numpy()
+        if torch.is_tensor(item_list_internal)
         else np.array(item_list_internal)
+    )
 
     return items_np[sorted_indices].copy(), sas_scores[sorted_indices].copy()
 
@@ -69,14 +68,16 @@ def get_top_k_recommendations(model, k, config):
     all_iids = []
 
     # Get user IDs internal to RecBole
-    test_user_internal_ids = np.unique(test_data.dataset.inter_feat[dataset.uid_field].numpy())
+    test_user_internal_ids = np.unique(
+        test_data.dataset.inter_feat[dataset.uid_field].numpy()
+    )
     total_users = len(test_user_internal_ids)
     num_batches = math.ceil(total_users / batch_size)
 
     # Get top-k recommendations for all the users
     for i in tqdm(
-            range(num_batches),
-            desc=f"Retrieving top-{k} recommendations for {total_users} users..."
+        range(num_batches),
+        desc=f"Retrieving top-{k} recommendations for {total_users} users...",
     ):
         # Calculate the current batch boundaries
         start_idx = i * batch_size
@@ -90,7 +91,7 @@ def get_top_k_recommendations(model, k, config):
         # and users in the current batch,
         # returning top-k predictions
         batch_scores, batch_iids = full_sort_topk(
-            uid_tensor, model, test_data, k=k, device=config['device']
+            uid_tensor, model, test_data, k=k, device=config["device"]
         )
         all_scores.append(batch_scores.cpu())
         all_iids.append(batch_iids.cpu())
@@ -102,12 +103,12 @@ def get_top_k_recommendations(model, k, config):
 
 
 def get_reranked_top_k_recommendations(
-        final_scores,
-        final_iids,
-        id_to_asin,
-        co2e_scores,
-        alpha,
-        k,
+    final_scores,
+    final_iids,
+    id_to_asin,
+    co2e_scores,
+    alpha,
+    k,
 ):
     # Get user and item IDs external to RecBole,
     # which match with the original dataset info
@@ -121,9 +122,11 @@ def get_reranked_top_k_recommendations(
     pos_matrix_list = []
     pos_len_list = []
     reranked_items_all_users = []
-    test_user_internal_ids = np.unique(test_data.dataset.inter_feat[dataset.uid_field].numpy())
+    test_user_internal_ids = np.unique(
+        test_data.dataset.inter_feat[dataset.uid_field].numpy()
+    )
     for idx, internal_uid in enumerate(
-            tqdm(test_user_internal_ids, desc=f"Re-ranking top-{k} recommendations...")
+        tqdm(test_user_internal_ids, desc=f"Re-ranking top-{k} recommendations...")
     ):
         # Get both internal items and scores
         internal_items = final_iids[idx]
@@ -136,7 +139,7 @@ def get_reranked_top_k_recommendations(
             score_list=item_scores,
             dataset=dataset,
             id_to_asin=id_to_asin,
-            alpha=alpha
+            alpha=alpha,
         )
 
         # Retrieve ground truth
@@ -179,7 +182,9 @@ light_gcn_config, light_gcn_model, *_ = load_data_and_model(
 
 # Load C02 score estimations
 co2e_scores = {}
-with open(f"../1_pcf/subset/results/{model_tag}_results.json", "r", encoding="utf-8") as f:
+with open(
+    f"../1_pcf/results/subset/results/{model_tag}_results.json", "r", encoding="utf-8"
+) as f:
     data_list = json.load(f)
     for data in data_list:
         if data.get("co2e_kg") is not None:
@@ -192,22 +197,18 @@ if co2e_scores:
     DEFAULT_PCF = sum(co2e_scores.values()) / len(co2e_scores)
 
 # Load item_index -> parent_asin mapping
-item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep='\t')
-id_to_asin = dict(zip(item_map_df['item_index'], item_map_df['parent_asin']))
+item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep="\t")
+id_to_asin = dict(zip(item_map_df["item_index"], item_map_df["parent_asin"]))
 
 # =============================================
 # Standard recommendations
 # =============================================
 # Retrieve the standard recommendations using both trained models
 final_scores_bpr, final_iids_bpr = get_top_k_recommendations(
-    model=bpr_model,
-    k=100,
-    config=bpr_config
+    model=bpr_model, k=100, config=bpr_config
 )
 final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
-    model=light_gcn_model,
-    k=100,
-    config=light_gcn_config
+    model=light_gcn_model, k=100, config=light_gcn_config
 )
 
 # =============================================
@@ -222,17 +223,17 @@ pos_matrix_list_bpr, pos_len_list_bpr, reranked_items_list_bpr = (
         id_to_asin=id_to_asin,
         co2e_scores=co2e_scores,
         alpha=ALPHA,
-        k=10
+        k=10,
     )
 )
 results_to_save = {
-    'pos_matrix': pos_matrix_list_bpr,
-    'pos_len': pos_len_list_bpr,
-    'reranked_items': reranked_items_list_bpr,
-    'model': 'BPR',
-    'alpha': ALPHA
+    "pos_matrix": pos_matrix_list_bpr,
+    "pos_len": pos_len_list_bpr,
+    "reranked_items": reranked_items_list_bpr,
+    "model": "BPR",
+    "alpha": ALPHA,
 }
-torch.save(results_to_save, f'results/subset/BPR/{model_tag}/results_alpha_{ALPHA}.pth')
+torch.save(results_to_save, f"results/subset/BPR/{model_tag}/results_alpha_{ALPHA}.pth")
 
 pos_matrix_list_light_gcn, pos_len_list_light_gcn, reranked_items_list_light_gcn = (
     get_reranked_top_k_recommendations(
@@ -241,14 +242,16 @@ pos_matrix_list_light_gcn, pos_len_list_light_gcn, reranked_items_list_light_gcn
         id_to_asin=id_to_asin,
         co2e_scores=co2e_scores,
         alpha=ALPHA,
-        k=10
+        k=10,
     )
 )
 results_to_save = {
-    'pos_matrix': pos_matrix_list_light_gcn,
-    'pos_len': pos_len_list_light_gcn,
-    'reranked_items': reranked_items_list_light_gcn,
-    'model': 'LightGCN',
-    'alpha': ALPHA
+    "pos_matrix": pos_matrix_list_light_gcn,
+    "pos_len": pos_len_list_light_gcn,
+    "reranked_items": reranked_items_list_light_gcn,
+    "model": "LightGCN",
+    "alpha": ALPHA,
 }
-torch.save(results_to_save, f'results/subset/LightGCN/{model_tag}/results_alpha_{ALPHA}.pth')
+torch.save(
+    results_to_save, f"results/subset/LightGCN/{model_tag}/results_alpha_{ALPHA}.pth"
+)

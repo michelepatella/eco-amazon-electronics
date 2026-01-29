@@ -15,11 +15,13 @@ def get_topk_from_scores(score_matrix, dataset, k, filename, batch_size=1024):
     all_user_tokens = dataset.id2token(dataset.uid_field, range(dataset.user_num))
 
     # Write header
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         f.write("users\titems\tscores\n")
 
     # Process users in batches
-    for start in tqdm(range(0, score_matrix.shape[0], batch_size), desc="Saving to disk..."):
+    for start in tqdm(
+        range(0, score_matrix.shape[0], batch_size), desc="Saving to disk..."
+    ):
         end = min(start + batch_size, score_matrix.shape[0])
         batch_scores = score_matrix[start:end]
 
@@ -29,57 +31,91 @@ def get_topk_from_scores(score_matrix, dataset, k, filename, batch_size=1024):
         # Process batch user tokens
         for u_idx in range(start, end):
             u_token = all_user_tokens[u_idx]
-            if u_token == '[PAD]': continue
+            if u_token == "[PAD]":
+                continue
 
             lines = []
-            for i_idx, score in zip(topk_items[u_idx - start].tolist(), topk_scores[u_idx - start].tolist()):
+            for i_idx, score in zip(
+                topk_items[u_idx - start].tolist(), topk_scores[u_idx - start].tolist()
+            ):
                 lines.append(f"{u_token}\t{all_item_tokens[i_idx]}\t{score}\n")
 
-            with open(filename, 'a') as f:
+            with open(filename, "a") as f:
                 f.writelines(lines)
 
     # Reorder by user
-    df = pd.read_csv(filename, sep='\t')
-    df.sort_values(by='users', inplace=True)
-    df.to_csv(filename, sep='\t', index=False)
+    df = pd.read_csv(filename, sep="\t")
+    df.sort_values(by="users", inplace=True)
+    df.to_csv(filename, sep="\t", index=False)
 
 
 def get_topk(model_name_file):
     """Save top-k and full predictions."""
     # Load model e dataset
-    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(model_name_file)
+    config, model, dataset, train_data, valid_data, test_data = load_data_and_model(
+        model_name_file
+    )
 
     # Full sort scores
     model.eval()
     with torch.no_grad():
-        user_e = model.user_embedding(torch.arange(dataset.user_num).to(config['device']))
-        item_e = model.item_embedding(torch.arange(dataset.item_num).to(config['device']))
+        user_e = model.user_embedding(
+            torch.arange(dataset.user_num).to(config["device"])
+        )
+        item_e = model.item_embedding(
+            torch.arange(dataset.item_num).to(config["device"])
+        )
         score_matrix = torch.matmul(user_e, item_e.transpose(0, 1)).cpu()
 
     # Save full predictions
     model_tag = model_name_file.split("/")[2].split("_")[0]
-    full_path = f'preds/full/{model_tag}_{model_name_file.split("/")[2]}.tsv'
+    full_path = f"preds/full/{model_tag}_{model_name_file.split('/')[2]}.tsv"
     get_topk_from_scores(score_matrix, dataset, score_matrix.shape[1], full_path)
 
     # Save top-k predictions
-    reader = pd.read_csv(full_path, sep='\t', chunksize=100000)
+    reader = pd.read_csv(full_path, sep="\t", chunksize=100000)
     top_1_list = []
     top_2_list = []
     top_3_list = []
     top_5_list = []
     top_10_list = []
     for chunk in reader:
-        chunk.sort_values(['users', 'scores'], ascending=[True, False], inplace=True)
-        top_1_list.append(chunk.groupby('users').head(1))
-        top_2_list.append(chunk.groupby('users').head(2))
-        top_3_list.append(chunk.groupby('users').head(3))
-        top_5_list.append(chunk.groupby('users').head(5))
-        top_10_list.append(chunk.groupby('users').head(10))
-    pd.concat(top_1_list).to_csv(f'preds/top1/{model_tag}_{model_name_file.split("/")[2]}.tsv', sep='\t', header=True, index=False)
-    pd.concat(top_2_list).to_csv(f'preds/top2/{model_tag}_{model_name_file.split("/")[2]}.tsv', sep='\t', header=True, index=False)
-    pd.concat(top_3_list).to_csv(f'preds/top3/{model_tag}_{model_name_file.split("/")[2]}.tsv', sep='\t', header=True, index=False)
-    pd.concat(top_5_list).to_csv(f'preds/top5/{model_tag}_{model_name_file.split("/")[2]}.tsv', sep='\t', header=True, index=False)
-    pd.concat(top_10_list).to_csv(f'preds/top10/{model_tag}_{model_name_file.split("/")[2]}.tsv', sep='\t', header=True, index=False)
+        chunk.sort_values(["users", "scores"], ascending=[True, False], inplace=True)
+        top_1_list.append(chunk.groupby("users").head(1))
+        top_2_list.append(chunk.groupby("users").head(2))
+        top_3_list.append(chunk.groupby("users").head(3))
+        top_5_list.append(chunk.groupby("users").head(5))
+        top_10_list.append(chunk.groupby("users").head(10))
+    pd.concat(top_1_list).to_csv(
+        f"preds/top1/{model_tag}_{model_name_file.split('/')[2]}.tsv",
+        sep="\t",
+        header=True,
+        index=False,
+    )
+    pd.concat(top_2_list).to_csv(
+        f"preds/top2/{model_tag}_{model_name_file.split('/')[2]}.tsv",
+        sep="\t",
+        header=True,
+        index=False,
+    )
+    pd.concat(top_3_list).to_csv(
+        f"preds/top3/{model_tag}_{model_name_file.split('/')[2]}.tsv",
+        sep="\t",
+        header=True,
+        index=False,
+    )
+    pd.concat(top_5_list).to_csv(
+        f"preds/top5/{model_tag}_{model_name_file.split('/')[2]}.tsv",
+        sep="\t",
+        header=True,
+        index=False,
+    )
+    pd.concat(top_10_list).to_csv(
+        f"preds/top10/{model_tag}_{model_name_file.split('/')[2]}.tsv",
+        sep="\t",
+        header=True,
+        index=False,
+    )
 
 
 def train_recbole_hpo(config, model_name, dataset_name, exp_name):
@@ -87,31 +123,31 @@ def train_recbole_hpo(config, model_name, dataset_name, exp_name):
 
     # Setup
     base_path = os.path.dirname(os.path.abspath(__file__))
-    dataset_path = os.path.join(base_path, 'dataset')
+    dataset_path = os.path.join(base_path, "dataset")
     config_str = f"lr_{config['lr']:.4f}_emb_{config['embedding_size']}_reg_{config['reg_weight']:.5f}"
-    unique_checkpoint_dir = os.path.join(base_path, 'saved', exp_name, config_str)
+    unique_checkpoint_dir = os.path.join(base_path, "saved", exp_name, config_str)
 
     # Run
     result = run_recbole(
         model=model_name,
         dataset=dataset_name,
         config_dict={
-            'tensorboard': False,
-            'device': device,
-            'epochs': config['epochs'],
-            'eval_step': 10,
-            'learning_rate': config['lr'],
-            'embedding_size': config['embedding_size'],
-            'reg_weight': config['reg_weight'],
-            **({'n_layers': config['n_layers']} if model_name == 'LightGCN' else {}),
-            'benchmark_filename': ['train', 'valid', 'test'],
-            'data_path': dataset_path,
-            'checkpoint_dir': unique_checkpoint_dir,
-        }
+            "tensorboard": False,
+            "device": device,
+            "epochs": config["epochs"],
+            "eval_step": 10,
+            "learning_rate": config["lr"],
+            "embedding_size": config["embedding_size"],
+            "reg_weight": config["reg_weight"],
+            **({"n_layers": config["n_layers"]} if model_name == "LightGCN" else {}),
+            "benchmark_filename": ["train", "valid", "test"],
+            "data_path": dataset_path,
+            "checkpoint_dir": unique_checkpoint_dir,
+        },
     )
 
     # RecBole returns best valid score dict
-    valid_recall = result['best_valid_score']
+    valid_recall = result["best_valid_score"]
     tune.report({"recall_10": valid_recall})
 
 
@@ -119,28 +155,28 @@ def run_hpo_bpr():
     """Run HPO for BPR."""
     # Define search space for BPR
     search_space = {
-        'lr': tune.loguniform(1e-4, 5e-3),
-        'embedding_size': tune.choice([32, 64]),
-        'reg_weight': tune.loguniform(1e-5, 1e-4),
-        'epochs': 100
+        "lr": tune.loguniform(1e-4, 5e-3),
+        "embedding_size": tune.choice([32, 64]),
+        "reg_weight": tune.loguniform(1e-5, 1e-4),
+        "epochs": 100,
     }
 
     # Run HPO for BPR
     analysis = tune.run(
         tune.with_parameters(
             train_recbole_hpo,
-            model_name='BPR',
-            dataset_name='amazon_elec',
+            model_name="BPR",
+            dataset_name="amazon_elec",
         ),
-        metric='recall_10',
-        mode='max',
+        metric="recall_10",
+        mode="max",
         config=search_space,
         num_samples=10,
-        resources_per_trial={'cpu': 4},
+        resources_per_trial={"cpu": 4},
     )
 
     # Get best config for BPR
-    best_config = analysis.get_best_config(metric='recall_10', mode='max')
+    best_config = analysis.get_best_config(metric="recall_10", mode="max")
     return best_config
 
 
@@ -148,29 +184,29 @@ def run_hpo_lightgcn():
     """Run HPO for BPR."""
     # Define search space for Light GCN
     search_space = {
-        'lr': tune.loguniform(1e-4, 5e-3),
-        'embedding_size': tune.choice([32, 64]),
-        'reg_weight': tune.loguniform(1e-5, 1e-4),
-        'n_layers': tune.choice([1, 2, 3]),
-        'epochs': 100
+        "lr": tune.loguniform(1e-4, 5e-3),
+        "embedding_size": tune.choice([32, 64]),
+        "reg_weight": tune.loguniform(1e-5, 1e-4),
+        "n_layers": tune.choice([1, 2, 3]),
+        "epochs": 100,
     }
 
     # Run HPO for Light GCN
     analysis = tune.run(
         tune.with_parameters(
             train_recbole_hpo,
-            model_name='LightGCN',
-            dataset_name='amazon_elec',
+            model_name="LightGCN",
+            dataset_name="amazon_elec",
         ),
-        metric='recall_10',
-        mode='max',
+        metric="recall_10",
+        mode="max",
         config=search_space,
         num_samples=15,
-        resources_per_trial={'cpu': 4}
+        resources_per_trial={"cpu": 4},
     )
 
     # Get best config for Light GCN
-    best_config = analysis.get_best_config(metric='recall_10', mode='max')
+    best_config = analysis.get_best_config(metric="recall_10", mode="max")
     return best_config
 
 
@@ -178,7 +214,7 @@ def run_hpo_lightgcn():
 # Setup
 # =============================================
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-ray.init(include_dashboard=True, dashboard_host='127.0.0.1', dashboard_port=8265)
+ray.init(include_dashboard=True, dashboard_host="127.0.0.1", dashboard_port=8265)
 
 # =============================================
 # HPO both for BPR and Light GCN
@@ -190,27 +226,27 @@ best_lgcn = run_hpo_lightgcn()
 # Final training both for BPR and Light GCN
 # =============================================
 run_recbole(
-    model='BPR',
-    dataset='amazon_elec',
+    model="BPR",
+    dataset="amazon_elec",
     config_dict={
         **best_bpr,
-        'device': device,
-        'benchmark_filename': ['train', 'valid', 'test'],
-        'checkpoint_dir': './saved/BPR_best'
-    }
+        "device": device,
+        "benchmark_filename": ["train", "valid", "test"],
+        "checkpoint_dir": "./saved/BPR_best",
+    },
 )
 model_file = get_latest_checkpoint("BPR_best")
 get_topk(model_file)
 
 run_recbole(
-    model='LightGCN',
-    dataset='amazon_elec',
+    model="LightGCN",
+    dataset="amazon_elec",
     config_dict={
         **best_lgcn,
-        'device': device,
-        'benchmark_filename': ['train', 'valid', 'test'],
-        'checkpoint_dir': './saved/LightGCN_best'
-    }
+        "device": device,
+        "benchmark_filename": ["train", "valid", "test"],
+        "checkpoint_dir": "./saved/LightGCN_best",
+    },
 )
 model_file = get_latest_checkpoint("LightGCN_best")
 get_topk(model_file)

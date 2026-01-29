@@ -18,40 +18,57 @@ CHECK_INTERVAL = 60
 def save_results(input_file, output_file):
     # Keep track of the name-ASIN products mapping
     # and of the original order they appear
-    with open(input_file, 'r') as f:
+    with open(input_file, "r") as f:
         input_data = [json.loads(l) for l in f if l.strip()]
-    products_mapping = {d['parent_asin']: d.get('title') for d in input_data}
-    products_order = [d['parent_asin'] for d in input_data]
+    products_mapping = {d["parent_asin"]: d.get("title") for d in input_data}
+    products_order = [d["parent_asin"] for d in input_data]
 
     # Wait for all the batches being processed
     processed_batches = set()
     while True:
         for job in client.batches.list():
-            if job.state.name == 'JOB_STATE_SUCCEEDED' and job.name not in processed_batches:
+            if (
+                job.state.name == "JOB_STATE_SUCCEEDED"
+                and job.name not in processed_batches
+            ):
                 print(f"\nSaving batch response ({job.name})...")
-                content = client.files.download(file=job.dest.file_name).decode('utf-8')
+                content = client.files.download(file=job.dest.file_name).decode("utf-8")
 
                 # Load existing results
                 all_results = {}
                 if os.path.exists(output_file):
-                    with open(output_file, 'r') as f:
-                        all_results = {item['parent_asin']: item for item in json.load(f)}
+                    with open(output_file, "r") as f:
+                        all_results = {
+                            item["parent_asin"]: item for item in json.load(f)
+                        }
 
                 # Parse the response
                 for line in content.splitlines():
                     node = json.loads(line)
-                    asin, raw_txt = node['custom_id'], node['response']['candidates'][0]['content']['parts'][0]['text']
-                    clean_txt = re.sub(r'```json\s*|```', '', raw_txt).strip().replace('\n', ' ')
-                    if clean_txt.count('{') > clean_txt.count('}'): clean_txt += '}'
+                    asin, raw_txt = (
+                        node["custom_id"],
+                        node["response"]["candidates"][0]["content"]["parts"][0][
+                            "text"
+                        ],
+                    )
+                    clean_txt = (
+                        re.sub(r"```json\s*|```", "", raw_txt)
+                        .strip()
+                        .replace("\n", " ")
+                    )
+                    if clean_txt.count("{") > clean_txt.count("}"):
+                        clean_txt += "}"
                     try:
-                        pred = json.loads(re.search(r'\{.*\}', clean_txt).group())
+                        pred = json.loads(re.search(r"\{.*\}", clean_txt).group())
                     except Exception:
                         co2_match = re.search(r'"co2e_kg":\s*([\d\.]+)', clean_txt)
                         expl_match = re.search(r'"explanation":\s*"(.*?)"', clean_txt)
                         pred = {
                             "co2e_kg": float(co2_match.group(1)) if co2_match else None,
                             "source": "estimation",
-                            "explanation": expl_match.group(1) if expl_match else "Parsing error"
+                            "explanation": expl_match.group(1)
+                            if expl_match
+                            else "Parsing error",
                         }
 
                     all_results[asin] = {
@@ -59,19 +76,23 @@ def save_results(input_file, output_file):
                         "parent_asin": asin,
                         "co2e_kg": pred.get("co2e_kg"),
                         "source": pred.get("source"),
-                        "explanation": pred.get("explanation")
+                        "explanation": pred.get("explanation"),
                     }
 
                 # Save the response
-                final_list = [all_results[a] for a in products_order if a in all_results]
+                final_list = [
+                    all_results[a] for a in products_order if a in all_results
+                ]
                 with open(output_file, "w", encoding="utf-8") as out:
                     json.dump(final_list, out, indent=4, ensure_ascii=False)
                 processed_batches.add(job.name)
-                print(f"\nBatch response saved ({len(final_list)}/{len(products_order)})")
+                print(
+                    f"\nBatch response saved ({len(final_list)}/{len(products_order)})"
+                )
 
         # Check whether everything has been saved
         if os.path.exists(output_file):
-            with open(output_file, 'r') as f:
+            with open(output_file, "r") as f:
                 if len(json.load(f)) >= len(products_order):
                     break
 
@@ -127,21 +148,14 @@ def estimate_co2_for_batch_of_products(product_data, llm_model):
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generation_config": {
                 "temperature": 0.0,
-                "response_mime_type": "application/json"
-            }
-        }
+                "response_mime_type": "application/json",
+            },
+        },
     }
     return json.dumps(batch_request, ensure_ascii=False)
 
 
-def main(
-        start_row,
-        num_rows,
-        input_file,
-        batch_file_name,
-        output_file,
-        model
-):
+def main(start_row, num_rows, input_file, batch_file_name, output_file, model):
     # Extract products to insert into the batch request
     products = []
     with open(input_file, "r", encoding="utf-8") as f:
@@ -168,7 +182,7 @@ def main(
     print("Uploading batch input file to API...")
     uploaded_file = client.files.upload(
         file=batch_file_name,
-        config=types.UploadFileConfig(mime_type='application/jsonl')
+        config=types.UploadFileConfig(mime_type="application/jsonl"),
     )
     print(f"Batch input file uploaded to API: {uploaded_file.name} (ID)")
     print("-" * 33)
@@ -176,10 +190,7 @@ def main(
     # Create the batch job
     print("-" * 15 + "(3)" + "-" * 15)
     print("Creating batch job...")
-    batch_job = client.batches.create(
-        model=f"models/{model}",
-        src=uploaded_file.name
-    )
+    batch_job = client.batches.create(model=f"models/{model}", src=uploaded_file.name)
     print("Batch job created:")
     print(f"\n- ID: {batch_job.name}")
     print(f"\n- Status: {batch_job.state}")
@@ -192,17 +203,26 @@ def main(
     print("-" * 33)
 
 
-# =============================================
-# Gemini 2.5 Flash (Batch Inference)
-# =============================================
+# ====================================
+# Batch Inference (Gemini-only)
+# ====================================
 model = "gemini-2.5-flash"
 client = genai.Client(api_key=getenv("GEMINI_API_KEY"))
 
 main(
+    # The first item in the input file to read
     start_row=...,
+    # How many items to consider, starting from start_row
     num_rows=...,
+    # "metadata/subset/metadata.jsonl" or "metadata/full/meta_<number>.jsonl"
+    # for partial (experiment 1) or full (experiment 2)
+    # co2e_kg extraction, respectively
     input_file=...,
+    # Temp file where to save batch inference results
     batch_file_name=...,
+    # "results/full/gemini-2_5-flash/<file_name>" or "results/subset/gemini-2_5-flash/<file_name>"
+    # for partial (experiment 1) or full (experiment 2)
+    # co2e_kg extraction, respectively
     output_file=...,
-    model=model
+    model=model,
 )
