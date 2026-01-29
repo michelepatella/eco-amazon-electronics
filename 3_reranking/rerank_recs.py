@@ -27,7 +27,7 @@ def pcf_aware_reranker(
         external_items.append(asin)
 
     # Retrieve PCF values
-    pcf_values = [co2e_scores.get(asin, DEFAULT_PCF) for asin in external_items]
+    pcf_values = [co2e_scores.get(asin) for asin in external_items]
     pcf_array = np.array(pcf_values)
 
     # Normalize PCF values
@@ -35,7 +35,7 @@ def pcf_aware_reranker(
     if max_pcf > min_pcf:
         pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf)
     else:
-        # Neutral PCF if not present
+        # Neutral PCF
         pcf_norm = np.full_like(pcf_array, 0.5)
 
     # Normalize predictions
