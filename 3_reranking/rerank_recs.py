@@ -32,19 +32,11 @@ def pcf_aware_reranker(
 
     # Normalize PCF values
     max_pcf, min_pcf = pcf_array.max(), pcf_array.min()
-    if max_pcf > min_pcf:
-        pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf)
-    else:
-        # Neutral PCF
-        pcf_norm = np.full_like(pcf_array, 0.5)
+    pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf)
 
     # Normalize predictions
     preds = np.array(score_list)
-    preds_norm = (
-        (preds - preds.min()) / (preds.max() - preds.min())
-        if preds.max() > preds.min()
-        else np.zeros_like(preds)
-    )
+    preds_norm = (preds - preds.min()) / (preds.max() - preds.min())
 
     # Calculate SaS
     sas_scores = alpha * preds_norm + (1 - alpha) * pcf_norm
@@ -67,7 +59,7 @@ def get_top_k_recommendations(model, k, config):
     all_scores = []
     all_iids = []
 
-    # Get user IDs internal to RecBole
+    # Get the internal RecBole user IDs
     test_user_internal_ids = np.unique(
         test_data.dataset.inter_feat[dataset.uid_field].numpy()
     )
@@ -108,7 +100,7 @@ def get_reranked_top_k_recommendations(
     id_to_asin,
     co2e_scores,
     alpha,
-    k,
+    k
 ):
     # Get user and item IDs external to RecBole,
     # which match with the original dataset info
@@ -133,7 +125,7 @@ def get_reranked_top_k_recommendations(
         item_scores = final_scores[idx].tolist()
 
         # Re-rank the recommendations taking care about PCF
-        reranked_items, reranked_scores = pcf_aware_reranker(
+        reranked_items, _ = pcf_aware_reranker(
             co2e_scores=co2e_scores,
             item_list_internal=internal_items,
             score_list=item_scores,
@@ -151,9 +143,7 @@ def get_reranked_top_k_recommendations(
         # For each item, check whether it appears in the ground truth:
         # 0 -> It doesn't appear
         # 1 -> It appears
-        reranked_items = [int(i) for i in reranked_items]
-        hits = [1 if int(item) in user_gt else 0 for item in reranked_items]
-        hits = hits[:k]
+        hits = [1 if int(item) in user_gt else 0 for item in reranked_items[:k]]
 
         # Update matrices for evaluation
         pos_matrix_list.append(hits)
@@ -165,12 +155,11 @@ def get_reranked_top_k_recommendations(
 # =============================================
 # Setup
 # =============================================
-# Fix alpha for SaS calculation
-# ALPHA = 0.25, 0.5, 0.75, 1.0
-ALPHA = 1.0
+alpha_values = [0.25, 0.5, 0.75, 1.0]
+k = 100
 
-# model_tag = "gemini-2_5-flash"
-model_tag = "gpt-o3-mini"
+# "gemini-2_5-flash" or "o3-mini"
+model_tag = ...
 
 # Load the latest, best BPR and LightGCN trained models
 bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
@@ -180,21 +169,15 @@ light_gcn_config, light_gcn_model, *_ = load_data_and_model(
     model_file=get_latest_checkpoint("LightGCN_best")
 )
 
-# Load C02 score estimations
+# Load CO2 score estimations
 co2e_scores = {}
 with open(
-    f"../1_pcf/results/subset/results/{model_tag}_results.json", "r", encoding="utf-8"
+    f"../1_pcf/results/full/{model_tag}/results.json", "r", encoding="utf-8"
 ) as f:
     data_list = json.load(f)
     for data in data_list:
         if data.get("co2e_kg") is not None:
             co2e_scores[data["parent_asin"]] = data["co2e_kg"]
-
-# Default value for all the
-# other items which have not
-# received any PCF estimation
-if co2e_scores:
-    DEFAULT_PCF = sum(co2e_scores.values()) / len(co2e_scores)
 
 # Load item_index -> parent_asin mapping
 item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep="\t")
@@ -205,53 +188,46 @@ id_to_asin = dict(zip(item_map_df["item_index"], item_map_df["parent_asin"]))
 # =============================================
 # Retrieve the standard recommendations using both trained models
 final_scores_bpr, final_iids_bpr = get_top_k_recommendations(
-    model=bpr_model, k=100, config=bpr_config
+    model=bpr_model, k=k, config=bpr_config
 )
 final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
-    model=light_gcn_model, k=100, config=light_gcn_config
+    model=light_gcn_model, k=k, config=light_gcn_config
 )
 
 # =============================================
 # PCF-aware recommendations
 # =============================================
-# Re-rank standard recommendations taking care
-# about PCF and save results
-pos_matrix_list_bpr, pos_len_list_bpr, reranked_items_list_bpr = (
-    get_reranked_top_k_recommendations(
+for alpha in alpha_values:
+    pos_matrix_bpr, pos_len_bpr, items_bpr = get_reranked_top_k_recommendations(
         final_scores=final_scores_bpr,
         final_iids=final_iids_bpr,
         id_to_asin=id_to_asin,
         co2e_scores=co2e_scores,
-        alpha=ALPHA,
-        k=10,
+        alpha=alpha,
+        k=k,
     )
-)
-results_to_save = {
-    "pos_matrix": pos_matrix_list_bpr,
-    "pos_len": pos_len_list_bpr,
-    "reranked_items": reranked_items_list_bpr,
-    "model": "BPR",
-    "alpha": ALPHA,
-}
-torch.save(results_to_save, f"results/subset/BPR/{model_tag}/results_alpha_{ALPHA}.pth")
+    results_bpr = {
+        "pos_matrix": pos_matrix_bpr,
+        "pos_len": pos_len_bpr,
+        "reranked_items": items_bpr,
+        "model": "BPR",
+        "alpha": alpha,
+    }
+    torch.save(results_bpr, f"results/BPR/{model_tag}/results_alpha_{alpha}.pth")
 
-pos_matrix_list_light_gcn, pos_len_list_light_gcn, reranked_items_list_light_gcn = (
-    get_reranked_top_k_recommendations(
+    pos_matrix_lgcn, pos_len_lgcn, items_lgcn = get_reranked_top_k_recommendations(
         final_scores=final_scores_light_gcn,
         final_iids=final_iids_light_gcn,
         id_to_asin=id_to_asin,
         co2e_scores=co2e_scores,
-        alpha=ALPHA,
-        k=10,
+        alpha=alpha,
+        k=k,
     )
-)
-results_to_save = {
-    "pos_matrix": pos_matrix_list_light_gcn,
-    "pos_len": pos_len_list_light_gcn,
-    "reranked_items": reranked_items_list_light_gcn,
-    "model": "LightGCN",
-    "alpha": ALPHA,
-}
-torch.save(
-    results_to_save, f"results/subset/LightGCN/{model_tag}/results_alpha_{ALPHA}.pth"
-)
+    results_lgcn = {
+        "pos_matrix": pos_matrix_lgcn,
+        "pos_len": pos_len_lgcn,
+        "reranked_items": items_lgcn,
+        "model": "LightGCN",
+        "alpha": alpha,
+    }
+    torch.save(results_lgcn, f"results/LightGCN/{model_tag}/results_alpha_{alpha}.pth")
