@@ -1,4 +1,3 @@
-import json
 
 import pandas as pd
 import torch
@@ -11,7 +10,7 @@ from tqdm import tqdm
 from recbole.utils.case_study import full_sort_topk
 from recbole.quick_start import load_data_and_model
 
-from utils import get_latest_checkpoint
+from utils import get_latest_checkpoint, get_co2e_kg_estimations
 
 
 def pcf_aware_reranker(
@@ -95,12 +94,7 @@ def get_top_k_recommendations(model, k, config):
 
 
 def get_reranked_top_k_recommendations(
-    final_scores,
-    final_iids,
-    id_to_asin,
-    co2e_scores,
-    alpha,
-    k
+    final_scores, final_iids, id_to_asin, co2e_scores, alpha, k
 ):
     # Get user and item IDs external to RecBole,
     # which match with the original dataset info
@@ -159,7 +153,7 @@ alpha_values = [0.25, 0.5, 0.75, 1.0]
 k = 100
 
 # "gemini-2_5-flash" or "o3-mini"
-model_tag = ...
+model_tag = "gemini-2_5-flash"
 
 # Load the latest, best BPR and LightGCN trained models
 bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
@@ -170,14 +164,7 @@ light_gcn_config, light_gcn_model, *_ = load_data_and_model(
 )
 
 # Load CO2 score estimations
-co2e_scores = {}
-with open(
-    f"../1_pcf/results/full/{model_tag}/results.json", "r", encoding="utf-8"
-) as f:
-    data_list = json.load(f)
-    for data in data_list:
-        if data.get("co2e_kg") is not None:
-            co2e_scores[data["parent_asin"]] = data["co2e_kg"]
+co2e_scores = get_co2e_kg_estimations(model_tag)
 
 # Load item_index -> parent_asin mapping
 item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep="\t")

@@ -1,12 +1,8 @@
 import ray
 from ray import tune
-from recbole.quick_start import run_recbole, load_data_and_model
+from recbole.quick_start import run_recbole
 import os
 import torch
-from tqdm import tqdm
-import pandas as pd
-
-from utils import get_latest_checkpoint
 
 
 def train_recbole(config, model_name, dataset_name, exp_name):
