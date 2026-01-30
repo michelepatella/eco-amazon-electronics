@@ -196,10 +196,10 @@ main(
     # "metadata/subset/metadata.jsonl" or "metadata/full/meta_<number>.jsonl"
     # for partial (experiment 1) or full (experiment 2)
     # co2e_kg extraction, respectively
-    input_file=...,
-    # "results/subset/{model}/results.json" or "results/full/{model}/results.jsonl"
+    input_file="metadata/subset/metadata.jsonl",
+    # f"results/subset/{model}/results.json" or f"results/full/{model}/results.jsonl"
     # for partial (experiment 1) or full (experiment 2) saving of co2e_kg extraction
     # results, respectively
-    output_file=...,
+    output_file=f"results/subset/{model}/results.json",
     model=model,
 )
