@@ -182,12 +182,12 @@ def main(num_rows, input_file, output_file, model):
 # Real-time Inference (Gemini or GPT)
 # ====================================
 # "o3-mini" or "gemini-2.5-flash"
-model = "gemini-2.5-flash"
+model = "o3-mini"
 
 client = OpenAI(
     # "OPENAI_API_KEY" or "GEMINI_API_KEY"
-    api_key=getenv("GEMINI_API_KEY"),
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key=getenv("OPENAI_API_KEY"),
+    #base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
 main(
