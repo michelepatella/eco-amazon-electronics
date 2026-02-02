@@ -60,6 +60,15 @@ def evaluate_model_results(data, k, config, dataset, id_to_asin, co2e_scores, it
         metric_name = m.split("@")[0].upper()
         res[metric_name] = round(v, 4)
 
+    # Calculate F1
+    prec = res.get("PRECISION")
+    rec = res.get("RECALL")
+    if prec is not None and rec is not None:
+        if (prec + rec) > 0:
+            res["F1"] = round(2 * (prec * rec) / (prec + rec), 4)
+        else:
+            res["F1"] = 0.0
+
     return res
 
 
@@ -67,7 +76,7 @@ def evaluate_model_results(data, k, config, dataset, id_to_asin, co2e_scores, it
 # Setup
 # =============================================
 # "gemini-2_5-flash" or "o3-mini"
-model_tag = "gemini-2_5-flash"
+model_tag = "o3-mini"
 alpha_values = [0.25, 0.5, 0.75, 1.0]
 models = ["BPR", "LightGCN"]
 k_values = [5, 10, 20, 50]

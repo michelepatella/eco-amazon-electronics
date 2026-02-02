@@ -153,7 +153,7 @@ alpha_values = [0.25, 0.5, 0.75, 1.0]
 k = 100
 
 # "gemini-2_5-flash" or "o3-mini"
-model_tag = "gemini-2_5-flash"
+model_tag = "o3-mini"
 
 # Load the latest, best BPR and LightGCN trained models
 bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
