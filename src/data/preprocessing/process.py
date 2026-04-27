@@ -1,6 +1,7 @@
 import pandas as pd
 from tqdm import tqdm
 
+
 # with open('electronics_CORE_15.jsonl', 'r', encoding='utf-8') as f:
 #    lines = [line for line in f if line.strip()]  # ignora righe vuote o solo spazi
 
