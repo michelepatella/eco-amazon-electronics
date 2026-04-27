@@ -3,4 +3,11 @@
 *.xml
 */*.iml
 *.idea
-/2_recbole/preds
+**/*.csv
+**/*.tsv
+**/*.inter
+**/*.jsonl
+**/*.json
+**/*.pth
+reports/
+.DS_STORE

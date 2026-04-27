@@ -1,8 +1,6 @@
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from os import getenv
-
-import numpy as np
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -50,23 +48,22 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
     Do not include any markdown formatting or additional JSON wrappers.
     """
 
-    values = []
-    last_valid_response = None
-
+    responses = []
     for _ in range(num_calls):
         # temperature=0.0
+        
         response = client.chat.completions.create(
             model=llm_model,
             messages=[{"role": "user", "content": prompt}],
         )
-        print(response)
+
         if not response or not response.choices:
             print("Error: the model response is not formatted or empty")
             continue
 
         try:
             raw_content = response.choices[0].message.content.strip()
-            print(f"\nProcessing product: {product_data.get('title')[:60]}...")
+            print(f"\nProcessing product: {product_data.get("name")[:60]}...")
 
             # Extract JSON object if there's additional text
             if "{" in raw_content and "}" in raw_content:
@@ -79,41 +76,27 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
 
             # Validate JSON before returning
             parsed = json.loads(clean_content)  # Test if it's valid JSON
-
-            if parsed.get("co2e_kg") is not None:
-                values.append(float(parsed.get("co2e_kg")))
-                last_valid_response = parsed
+            responses.append(parsed)
 
         except Exception as e:
             print(f"Error processing response: {str(e)}")
             continue
 
-    if not values:
-        return json.dumps(
-            {
-                "co2e_kg": None,
-                "explanation": "Error: no valid response provided by the model.",
-            }
-        )
+    final_response = json.dumps(responses)
+    print(final_response)
 
-    # Apply distance-based weighting from the median to
-    # mitigate the impact of outliers in LLM estimations
-    weights = 1.0 / (np.abs(np.array(values) - np.median(np.array(values))) + 1e-5)
-    avg_value = np.average(np.array(values), weights=weights)
-    last_valid_response["co2e_kg"] = avg_value
-
-    return json.dumps(last_valid_response)
+    return final_response
 
 
 def main(num_rows, input_file, output_file, model):
     # Load data from the json
     products = []
 
-    # split metadata file into several parts due to the size of the original file
+    # Split metadata file into several parts due to the size of the original file
     with open(input_file, "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_rows:
-                # this is due to the limits of the API
+                # This is due to the limits of the API
                 break
             product = json.loads(line.strip())
             products.append(product)
@@ -142,19 +125,15 @@ def main(num_rows, input_file, output_file, model):
                     answer_data = json.loads(llm_answer)
 
                     result = {
-                        "title": product.get("title"),
-                        "parent_asin": product.get("parent_asin"),
-                        "co2e_kg": answer_data.get("co2e_kg"),
-                        "source": answer_data.get("source"),
-                        "explanation": answer_data.get("explanation"),
+                        "name": product.get("name"),
+                        "co2e_kg": answer_data,
                     }
 
                 except Exception as e:
-                    print(f"Error processing product {product.get('title')[:60]}: {e}")
+                    print(f"Error processing product {product.get("name")[:60]}: {e}")
                     result = {
-                        "title": product.get("title"),
+                        "name": product.get("name"),
                         "co2e_kg": None,
-                        "explanation": f"Error processing response: {llm_answer}",
                     }
 
                 results_buffer[idx] = result
@@ -191,15 +170,8 @@ client = OpenAI(
 )
 
 main(
-    # Very high number
     num_rows=10000,
-    # "metadata/subset/metadata.jsonl" or "metadata/full/meta_<number>.jsonl"
-    # for partial (experiment 1) or full (experiment 2)
-    # co2e_kg extraction, respectively
-    input_file="metadata/subset/metadata.jsonl",
-    # f"results/subset/{model}/results.json" or f"results/full/{model}/results.jsonl"
-    # for partial (experiment 1) or full (experiment 2) saving of co2e_kg extraction
-    # results, respectively
-    output_file=f"results/subset/{model}/results.json",
+    input_file="1-pcf/metadata/ground-truths/electronics.jsonl",
+    output_file="1-pcf/results/ground-truths/gemini-2_5-flash/electronics.jsonl",
     model=model,
 )

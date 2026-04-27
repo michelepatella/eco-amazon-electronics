@@ -4,7 +4,7 @@ import numpy as np
 from recbole.evaluator import Evaluator
 from recbole.quick_start import load_data_and_model
 
-from utils import get_latest_checkpoint, get_co2e_kg_estimations
+from src.utils import get_latest_checkpoint, get_co2e_kg_estimations
 
 
 def calculate_average_pcf(reranked_items_list, id_to_asin, scores_dict, dataset, k):

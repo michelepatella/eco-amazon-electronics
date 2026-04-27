@@ -10,7 +10,7 @@ from tqdm import tqdm
 from recbole.utils.case_study import full_sort_topk
 from recbole.quick_start import load_data_and_model
 
-from utils import get_latest_checkpoint, get_co2e_kg_estimations
+from src.utils import get_latest_checkpoint, get_co2e_kg_estimations
 
 
 def pcf_aware_reranker(
