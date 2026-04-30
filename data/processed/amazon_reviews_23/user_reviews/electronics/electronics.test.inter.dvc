@@ -1,0 +1,5 @@
+outs:
+- md5: 2ccf7fa6decc329fea5050f284df7fe0
+  size: 572228
+  hash: md5
+  path: electronics.test.inter

@@ -1,0 +1,5 @@
+outs:
+- md5: ce8b79bc13cd9b84a2649988d0a50409
+  size: 750222
+  hash: md5
+  path: user_map.tsv

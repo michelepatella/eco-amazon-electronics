@@ -1,0 +1,5 @@
+outs:
+- md5: 11c134901efcdd16e564e4d967679eb9
+  size: 571996
+  hash: md5
+  path: electronics.valid.inter

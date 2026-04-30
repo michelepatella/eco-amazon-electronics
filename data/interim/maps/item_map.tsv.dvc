@@ -1,0 +1,5 @@
+outs:
+- md5: 14244ea355b4b645e2ba6b1393cc1aa4
+  size: 310781
+  hash: md5
+  path: item_map.tsv
