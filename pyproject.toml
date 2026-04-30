@@ -1,0 +1,43 @@
+# Project settings -----------------------------------------------------------------------------------------------------
+[project]
+name = "ecoamazon-electronics"
+version = "0.1.0"
+description = "Sustainable Amazon (electronics) product recommendations, balancing user preferences with environmental impact estimated by an agent for eco-friendly e-commerce."
+readme = "README.md"
+requires-python = ">=3.14"
+
+# Required dependencies ------------------------------------------------------------------------------------------------
+dependencies = [
+    "numpy==2.4.4",
+    "pandas==3.0.2",
+    "python-dotenv==1.2.1",
+    "ray==2.55.1",
+    "recbole==1.2.0",
+    "torch==2.11.0",
+    "tqdm==4.67.3"
+]
+
+# Optional dependencies ------------------------------------------------------------------------------------------------
+[project.optional-dependencies]
+dev = [
+    "dvc[s3]==3.67.1",
+    "pre-commit==4.6.0",
+    "ruff==0.15.12"
+]
+
+[project.urls]
+"Source" = "https://github.com/michelepatella/EcoAmazon-Electronics"
+
+# Tools settings -------------------------------------------------------------------------------------------------------
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+select = ["ALL"]
+extend-select = ["D"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

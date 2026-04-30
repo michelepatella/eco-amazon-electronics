@@ -9,3 +9,4 @@
 **/*.jsonl
 **/*.json
 **/*.pth
+**/*.log
