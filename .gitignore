@@ -1,13 +1,11 @@
+.DS_STORE
 .env
-*/*.xml
-*.xml
-*/*.iml
-*.idea
+**/*.xml
+**/*.iml
+**/*.idea
 **/*.csv
 **/*.tsv
 **/*.inter
 **/*.jsonl
 **/*.json
 **/*.pth
-reports/
-.DS_STORE
