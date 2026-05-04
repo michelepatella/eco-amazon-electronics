@@ -1,3 +1,8 @@
+"""src/data/preprocess.py
+
+Data preprocessing module.
+"""
+
 import pandas as pd
 from tqdm import tqdm
 
@@ -112,7 +117,9 @@ def _build_user_item_maps(
 
 
 def _binarize_user_reviews(
-    user_reviews: pd.DataFrame, map_users: dict, map_items: list[tuple],
+    user_reviews: pd.DataFrame,
+    map_users: dict,
+    map_items: list[tuple],
 ) -> pd.DataFrame:
     """Binarize ratings and save user-item interactions in RecBole format.
 
@@ -158,7 +165,9 @@ def _binarize_user_reviews(
     ).reset_index(drop=True)
 
     binarized_user_reviews.to_csv(
-        processed_user_reviews_path, sep="\t", index=False,
+        processed_user_reviews_path,
+        sep="\t",
+        index=False,
     )
 
     return binarized_user_reviews
@@ -199,7 +208,8 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
     # Group interactions by user and process each user's history temporally
     # to maintain chronological order within user interactions
     for _, user_interactions in user_reviews.groupby(
-        PROCESSED_UR_USER_ID_COL, sort=True,
+        PROCESSED_UR_USER_ID_COL,
+        sort=True,
     ):
         # Calculate split boundaries based on number of user interactions
         # ensuring each split respects the configured ratios
@@ -277,7 +287,9 @@ def preprocess_data() -> None:
     # matrix suitable for recommendation models, then shuffle for robustness
     steps.set_description("Binarizing user-item interactions")
     binarized_user_reviews = _binarize_user_reviews(
-        user_reviews, map_users, map_items,
+        user_reviews,
+        map_users,
+        map_items,
     )
     steps.update(1)
 

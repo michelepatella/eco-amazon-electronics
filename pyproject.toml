@@ -10,6 +10,7 @@ requires-python = ">=3.14"
 dependencies = [
     "numpy==2.4.4",
     "pandas==3.0.2",
+    "pydantic==2.13.3",
     "python-dotenv==1.2.1",
     "ray==2.55.1",
     "recbole==1.2.0",
