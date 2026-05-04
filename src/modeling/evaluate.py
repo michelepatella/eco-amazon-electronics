@@ -7,7 +7,9 @@ from recbole.quick_start import load_data_and_model
 from src.utils import get_latest_checkpoint, get_co2e_kg_estimations
 
 
-def calculate_average_pcf(reranked_items_list, id_to_asin, scores_dict, dataset, k):
+def calculate_average_pcf(
+    reranked_items_list, id_to_asin, scores_dict, dataset, k
+):
     """Calculate average PCF across all the users based on the first-k recommendations."""
     total_pcf = 0
     count = 0
@@ -22,7 +24,9 @@ def calculate_average_pcf(reranked_items_list, id_to_asin, scores_dict, dataset,
     return total_pcf / count if count > 0 else 0
 
 
-def evaluate_model_results(data, k, config, dataset, id_to_asin, co2e_scores, item_cnt):
+def evaluate_model_results(
+    data, k, config, dataset, id_to_asin, co2e_scores, item_cnt
+):
     """Evaluate the RecSys both on RecBole and sustainability metrics, considering
     the top-k recommendations."""
     # Retrieve top-k re-ranked items and prepare tensors
@@ -31,8 +35,12 @@ def evaluate_model_results(data, k, config, dataset, id_to_asin, co2e_scores, it
     reranked_np = np.array(reranked_items_list)[:, :k]
     reranked_items = torch.tensor(reranked_np, device=config["device"])
 
-    pos_matrix = torch.tensor(data["pos_matrix"], device=config["device"])[:, :k]
-    pos_len = torch.tensor(data["pos_len"], device=config["device"]).view(-1, 1)
+    pos_matrix = torch.tensor(data["pos_matrix"], device=config["device"])[
+        :, :k
+    ]
+    pos_len = torch.tensor(data["pos_len"], device=config["device"]).view(
+        -1, 1
+    )
 
     # Run RecBole evaluation, defining its configuration
     config["topk"] = [k]
@@ -103,7 +111,9 @@ config["metrics"] = [
 co2e_scores = get_co2e_kg_estimations(model_tag)
 
 # Load item_index -> parent_asin mapping
-item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep="\t")
+item_map_df = pd.read_csv(
+    "../2_recbole/process_data/maps/item_map.tsv", sep="\t"
+)
 id_to_asin = dict(zip(item_map_df["item_index"], item_map_df["parent_asin"]))
 
 # For calculating item popularity
@@ -122,9 +132,7 @@ item_cnt = [(i, count) for i, count in enumerate(item_cnt_array)]
 all_final_results = []
 for model in models:
     for alpha in alpha_values:
-        file_path = (
-            f"../3_reranking/results/{model}/{model_tag}/results_alpha_{alpha}.pth"
-        )
+        file_path = f"../3_reranking/results/{model}/{model_tag}/results_alpha_{alpha}.pth"
         data = torch.load(file_path, weights_only=False)
         for k_val in k_values:
             res = evaluate_model_results(
@@ -134,7 +142,9 @@ for model in models:
 
 # Save results
 df_final = pd.DataFrame(all_final_results)
-df_final = df_final.sort_values(["MODEL", "K", "ALPHA"], ascending=[True, True, False])
+df_final = df_final.sort_values(
+    ["MODEL", "K", "ALPHA"], ascending=[True, True, False]
+)
 df_final.to_csv(f"results/{model_tag}/results.csv", index=False)
 
 # Show results

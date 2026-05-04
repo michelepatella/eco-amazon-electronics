@@ -111,7 +111,10 @@ def get_reranked_top_k_recommendations(
         test_data.dataset.inter_feat[dataset.uid_field].numpy()
     )
     for idx, internal_uid in enumerate(
-        tqdm(test_user_internal_ids, desc=f"Re-ranking top-{k} recommendations...")
+        tqdm(
+            test_user_internal_ids,
+            desc=f"Re-ranking top-{k} recommendations...",
+        )
     ):
         # Get both internal items and scores
         internal_items = final_iids[idx]
@@ -136,7 +139,9 @@ def get_reranked_top_k_recommendations(
         # For each item, check whether it appears in the ground truth:
         # 0 -> It doesn't appear
         # 1 -> It appears
-        hits = [1 if int(item) in user_gt else 0 for item in reranked_items[:k]]
+        hits = [
+            1 if int(item) in user_gt else 0 for item in reranked_items[:k]
+        ]
 
         # Update matrices for evaluation
         pos_matrix_list.append(hits)
@@ -166,7 +171,9 @@ light_gcn_config, light_gcn_model, *_ = load_data_and_model(
 co2e_scores = get_co2e_kg_estimations(model_tag)
 
 # Load item_index -> parent_asin mapping
-item_map_df = pd.read_csv("../2_recbole/process_data/maps/item_map.tsv", sep="\t")
+item_map_df = pd.read_csv(
+    "../2_recbole/process_data/maps/item_map.tsv", sep="\t"
+)
 id_to_asin = dict(zip(item_map_df["item_index"], item_map_df["parent_asin"]))
 
 # =============================================
@@ -184,13 +191,15 @@ final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
 # PCF-aware recommendations
 # =============================================
 for alpha in alpha_values:
-    pos_matrix_bpr, pos_len_bpr, items_bpr = get_reranked_top_k_recommendations(
-        final_scores=final_scores_bpr,
-        final_iids=final_iids_bpr,
-        id_to_asin=id_to_asin,
-        co2e_scores=co2e_scores,
-        alpha=alpha,
-        k=k,
+    pos_matrix_bpr, pos_len_bpr, items_bpr = (
+        get_reranked_top_k_recommendations(
+            final_scores=final_scores_bpr,
+            final_iids=final_iids_bpr,
+            id_to_asin=id_to_asin,
+            co2e_scores=co2e_scores,
+            alpha=alpha,
+            k=k,
+        )
     )
     results_bpr = {
         "pos_matrix": pos_matrix_bpr,
@@ -199,15 +208,19 @@ for alpha in alpha_values:
         "model": "BPR",
         "alpha": alpha,
     }
-    torch.save(results_bpr, f"results/BPR/{model_tag}/results_alpha_{alpha}.pth")
+    torch.save(
+        results_bpr, f"results/BPR/{model_tag}/results_alpha_{alpha}.pth"
+    )
 
-    pos_matrix_lgcn, pos_len_lgcn, items_lgcn = get_reranked_top_k_recommendations(
-        final_scores=final_scores_light_gcn,
-        final_iids=final_iids_light_gcn,
-        id_to_asin=id_to_asin,
-        co2e_scores=co2e_scores,
-        alpha=alpha,
-        k=k,
+    pos_matrix_lgcn, pos_len_lgcn, items_lgcn = (
+        get_reranked_top_k_recommendations(
+            final_scores=final_scores_light_gcn,
+            final_iids=final_iids_light_gcn,
+            id_to_asin=id_to_asin,
+            co2e_scores=co2e_scores,
+            alpha=alpha,
+            k=k,
+        )
     )
     results_lgcn = {
         "pos_matrix": pos_matrix_lgcn,
@@ -216,4 +229,6 @@ for alpha in alpha_values:
         "model": "LightGCN",
         "alpha": alpha,
     }
-    torch.save(results_lgcn, f"results/LightGCN/{model_tag}/results_alpha_{alpha}.pth")
+    torch.save(
+        results_lgcn, f"results/LightGCN/{model_tag}/results_alpha_{alpha}.pth"
+    )

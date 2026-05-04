@@ -122,7 +122,7 @@ def _binarize_user_reviews(
     matrix suitable for recommendation systems, applying three key transformations:
     1. Maps original user IDs and item ASINs to sequential indices.
     2. Binarizes ratings so that those greater than or equal to the positive threshold
-       become 1 (positive) all others become 0 (negative), enabling implicit feedback 
+       become 1 (positive) all others become 0 (negative), enabling implicit feedback
        scenarios.
     3. Saves in RecBole format.
 
@@ -198,7 +198,9 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
 
     # Group interactions by user and process each user's history temporally
     # to maintain chronological order within user interactions
-    for _, user_interactions in user_reviews.groupby(PROCESSED_UR_USER_ID_COL, sort=True):
+    for _, user_interactions in user_reviews.groupby(
+        PROCESSED_UR_USER_ID_COL, sort=True
+    ):
         # Calculate split boundaries based on number of user interactions
         # ensuring each split respects the configured ratios
         num_interactions = len(user_interactions)

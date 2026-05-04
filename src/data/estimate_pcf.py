@@ -51,7 +51,7 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
     responses = []
     for _ in range(num_calls):
         # temperature=0.0
-        
+
         response = client.chat.completions.create(
             model=llm_model,
             messages=[{"role": "user", "content": prompt}],
@@ -63,7 +63,7 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
 
         try:
             raw_content = response.choices[0].message.content.strip()
-            print(f"\nProcessing product: {product_data.get("name")[:60]}...")
+            print(f"\nProcessing product: {product_data.get('name')[:60]}...")
 
             # Extract JSON object if there's additional text
             if "{" in raw_content and "}" in raw_content:
@@ -130,7 +130,9 @@ def main(num_rows, input_file, output_file, model):
                     }
 
                 except Exception as e:
-                    print(f"Error processing product {product.get("name")[:60]}: {e}")
+                    print(
+                        f"Error processing product {product.get('name')[:60]}: {e}"
+                    )
                     result = {
                         "name": product.get("name"),
                         "co2e_kg": None,
@@ -143,7 +145,9 @@ def main(num_rows, input_file, output_file, model):
                     for i in sorted(batch_indices):
                         if not first_item:
                             out.write(",\n")
-                        out.write(json.dumps(results_buffer[i], ensure_ascii=False))
+                        out.write(
+                            json.dumps(results_buffer[i], ensure_ascii=False)
+                        )
                         first_item = False
                     batch_indices = []  # Reset batch
 
@@ -166,7 +170,7 @@ model = "o3-mini"
 client = OpenAI(
     # "OPENAI_API_KEY" or "GEMINI_API_KEY"
     api_key=getenv("OPENAI_API_KEY"),
-    #base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    # base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
 main(

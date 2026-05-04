@@ -11,7 +11,9 @@ def train_recbole(config, model_name, dataset_name, exp_name):
     base_path = os.path.dirname(os.path.abspath(__file__))
     dataset_path = os.path.join(base_path, "dataset")
     config_str = f"lr_{config['lr']:.4f}_emb_{config['embedding_size']}_reg_{config['reg_weight']:.5f}"
-    unique_checkpoint_dir = os.path.join(base_path, "models", exp_name, config_str)
+    unique_checkpoint_dir = os.path.join(
+        base_path, "models", exp_name, config_str
+    )
 
     # Run training
     result = run_recbole(
@@ -25,7 +27,11 @@ def train_recbole(config, model_name, dataset_name, exp_name):
             "learning_rate": config["lr"],
             "embedding_size": config["embedding_size"],
             "reg_weight": config["reg_weight"],
-            **({"n_layers": config["n_layers"]} if model_name == "LightGCN" else {}),
+            **(
+                {"n_layers": config["n_layers"]}
+                if model_name == "LightGCN"
+                else {}
+            ),
             "benchmark_filename": ["train", "valid", "test"],
             "data_path": dataset_path,
             "checkpoint_dir": unique_checkpoint_dir,
@@ -75,7 +81,9 @@ def run_hpo(model_name, num_samples):
 # =============================================
 # Configure device and initialize Ray
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-ray.init(include_dashboard=True, dashboard_host="127.0.0.1", dashboard_port=8265)
+ray.init(
+    include_dashboard=True, dashboard_host="127.0.0.1", dashboard_port=8265
+)
 
 # =============================================
 # HPO both for BPR and Light GCN
