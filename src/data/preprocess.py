@@ -143,27 +143,20 @@ def _binarize_user_reviews(
             The binarized user reviews dataset.
     """
     # Binarize ratings and save user-item interactions in RecBole format
-    binarized_user_reviews = (
-        pd.DataFrame(
-            {
-                PROCESSED_UR_USER_ID_COL: user_reviews[RAW_UR_USER_ID_COL].map(
-                    map_users
-                ),
-                PROCESSED_UR_ITEM_ID_COL: user_reviews[RAW_UR_ASIN_COL].map(
-                    {
-                        item_id: item_index
-                        for item_id, item_index, _ in map_items
-                    }
-                ),
-                PROCESSED_UR_RATING_COL: (
-                    user_reviews[RAW_UR_RATING_COL]
-                    == config.data.preprocessing.binarization.rating.threshold
-                ).astype(int),
-            }
-        )
-        .sample(frac=1, random_state=config.seed)
-        .reset_index(drop=True)
-    )
+    binarized_user_reviews = pd.DataFrame(
+        {
+            PROCESSED_UR_USER_ID_COL: user_reviews[RAW_UR_USER_ID_COL].map(
+                map_users
+            ),
+            PROCESSED_UR_ITEM_ID_COL: user_reviews[RAW_UR_ASIN_COL].map(
+                {item_id: item_index for item_id, item_index, _ in map_items}
+            ),
+            PROCESSED_UR_RATING_COL: (
+                user_reviews[RAW_UR_RATING_COL]
+                == config.data.preprocessing.binarization.rating.threshold
+            ).astype(int),
+        }
+    ).reset_index(drop=True)
 
     binarized_user_reviews.to_csv(
         processed_user_reviews_path, sep="\t", index=False
@@ -173,38 +166,63 @@ def _binarize_user_reviews(
 
 
 def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
-    """Split user reviews into train, validation, and test sets and save them.
+    """Split user reviews by temporal order within each user group.
 
-    This function splits the user reviews dataset into three subsets:
-    - Training set: Used for model training.
-    - Validation set: Used for hyperparameter tuning and model selection.
-    - Test set: Used for final evaluation of the model's performance.
-    The resulting subsets are saved in RecBole format.
+    Performs a user-aware temporal split, ensuring that for each individual
+    user, older interactions are allocated to train, more recent to validation,
+    and the most recent to test. This approach prevents temporal leakage and
+    creates a more realistic evaluation scenario where models predict future
+    user behavior. For each user, interactions are ordered by timestamp and split as:
+    - Train: oldest interactions
+    - Validation: more recent interactions
+    - Test: most recent interactions
 
     Args:
         user_reviews (pd.DataFrame):
-            The user reviews dataset to split.
+            Binarized user-item interactions with columns:
+            - "user_id:token": Mapped user index
+            - "item_id:token": Mapped item index
+            - "rating:float": Binary rating 0 or 1
 
     Returns:
         None
     """
-    # Calculate train and validation sizes
-    train_size = int(
-        config.data.preprocessing.split.train_ratio * len(user_reviews)
-    )
-    valid_size = int(
-        config.data.preprocessing.split.valid_ratio * len(user_reviews)
-    )
+    # Initialize lists to accumulate splits across all users
+    train_splits = []
+    valid_splits = []
+    test_splits = []
 
-    # Split the dataset into train, validation, and test sets and
-    # save them in RecBole format
-    user_reviews.iloc[:train_size].to_csv(
+    # Group interactions by user and process each user's history temporally
+    # to maintain chronological order within user interactions
+    for _, user_interactions in user_reviews.groupby(PROCESSED_UR_USER_ID_COL):
+        # Calculate split boundaries based on number of user interactions
+        # ensuring each split respects the configured ratios
+        num_interactions = len(user_interactions)
+        train_size = int(
+            config.data.preprocessing.split.train_ratio * num_interactions
+        )
+        valid_size = int(
+            config.data.preprocessing.split.valid_ratio * num_interactions
+        )
+
+        # Split user's temporal sequence: old -> train, recent -> valid,
+        # newest -> test maintaining strict temporal ordering within each
+        # user's interaction history
+        train_splits.append(user_interactions.iloc[:train_size])
+        valid_splits.append(
+            user_interactions.iloc[train_size : train_size + valid_size]
+        )
+        test_splits.append(user_interactions.iloc[train_size + valid_size :])
+
+    # Concatenate all user splits into final split matrices and save
+    # in RecBole format
+    pd.concat(train_splits, ignore_index=True).to_csv(
         processed_user_reviews_train_path, sep="\t", index=False
     )
-    user_reviews.iloc[train_size : train_size + valid_size].to_csv(
+    pd.concat(valid_splits, ignore_index=True).to_csv(
         processed_user_reviews_valid_path, sep="\t", index=False
     )
-    user_reviews.iloc[train_size + valid_size :].to_csv(
+    pd.concat(test_splits, ignore_index=True).to_csv(
         processed_user_reviews_test_path, sep="\t", index=False
     )
 
