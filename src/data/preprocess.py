@@ -121,8 +121,9 @@ def _binarize_user_reviews(
     This function transforms the raw user reviews into a binarized interaction
     matrix suitable for recommendation systems, applying three key transformations:
     1. Maps original user IDs and item ASINs to sequential indices.
-    2. Binarizes ratings so that those equal to the positive threshold become 1
-       (positive) all others become 0 (negative), enabling implicit feedback scenarios.
+    2. Binarizes ratings so that those greater than or equal to the positive threshold
+       become 1 (positive) all others become 0 (negative), enabling implicit feedback 
+       scenarios.
     3. Shuffles and saves in RecBole format.
 
     Args:
@@ -153,7 +154,7 @@ def _binarize_user_reviews(
             ),
             PROCESSED_UR_RATING_COL: (
                 user_reviews[RAW_UR_RATING_COL]
-                == config.data.preprocessing.binarization.rating.threshold
+                >= config.data.preprocessing.binarization.rating.threshold
             ).astype(int),
         }
     ).reset_index(drop=True)
