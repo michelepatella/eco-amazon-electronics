@@ -1,6 +1,6 @@
 # `models/`
 
-Directory for all trained recommendation models and their sustainability-aware re-ranked predictions.
+Directory for all trained recommendation models and their re-ranked predictions.
 
 **Note**: This project uses DVC to manage model files. Make sure `dvc` is installed, then pull all model artifacts from the remote bucket:
 ```bash
