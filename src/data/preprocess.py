@@ -198,7 +198,7 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
 
     # Group interactions by user and process each user's history temporally
     # to maintain chronological order within user interactions
-    for _, user_interactions in user_reviews.groupby(PROCESSED_UR_USER_ID_COL):
+    for _, user_interactions in user_reviews.groupby(PROCESSED_UR_USER_ID_COL, sort=True):
         # Calculate split boundaries based on number of user interactions
         # ensuring each split respects the configured ratios
         num_interactions = len(user_interactions)
