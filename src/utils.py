@@ -1,6 +1,14 @@
 import glob
 import json
 import os
+import yaml
+from src.config.config import Config
+
+
+def load_config(path: str) -> Config:
+    with open(path, "r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f)
+    return Config.model_validate(raw)
 
 
 def get_latest_checkpoint(model_name):
