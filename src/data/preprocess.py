@@ -166,16 +166,19 @@ def _binarize_user_reviews(
 
 
 def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
-    """Split user reviews by temporal order within each user group.
+    """Split user reviews by temporal order and shuffle training set.
 
     Performs a user-aware temporal split, ensuring that for each individual
     user, older interactions are allocated to train, more recent to validation,
     and the most recent to test. This approach prevents temporal leakage and
-    creates a more realistic evaluation scenario where models predict future
-    user behavior. For each user, interactions are ordered by timestamp and split as:
-    - Train: oldest interactions
-    - Validation: more recent interactions
-    - Test: most recent interactions
+    creates a more realistic evaluation scenario. The training set is then
+    shuffled for robustness while validation and test sets preserve temporal
+    order to ensure realistic evaluation conditions.
+
+    For each user, interactions are ordered by timestamp and split as:
+    - Train: oldest interactions (then shuffled)
+    - Validation: more recent interactions (temporal order preserved)
+    - Test: most recent interactions (temporal order preserved)
 
     Args:
         user_reviews (pd.DataFrame):
@@ -214,17 +217,22 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
         )
         test_splits.append(user_interactions.iloc[train_size + valid_size :])
 
-    # Concatenate all user splits into final split matrices and save
-    # in RecBole format
-    pd.concat(train_splits, ignore_index=True).to_csv(
-        processed_user_reviews_train_path, sep="\t", index=False
+    # Concatenate all user splits into final split matrices
+    train_df = pd.concat(train_splits, ignore_index=True)
+    valid_df = pd.concat(valid_splits, ignore_index=True)
+    test_df = pd.concat(test_splits, ignore_index=True)
+
+    # Shuffle training set for robustness using configured seed for full
+    # reproducibility. Valid and test sets preserve temporal order to ensure
+    # realistic evaluation (model predicts future, not random past)
+    train_df = train_df.sample(frac=1.0, random_state=config.seed).reset_index(
+        drop=True
     )
-    pd.concat(valid_splits, ignore_index=True).to_csv(
-        processed_user_reviews_valid_path, sep="\t", index=False
-    )
-    pd.concat(test_splits, ignore_index=True).to_csv(
-        processed_user_reviews_test_path, sep="\t", index=False
-    )
+
+    # Save all splits in RecBole format
+    train_df.to_csv(processed_user_reviews_train_path, sep="\t", index=False)
+    valid_df.to_csv(processed_user_reviews_valid_path, sep="\t", index=False)
+    test_df.to_csv(processed_user_reviews_test_path, sep="\t", index=False)
 
 
 def preprocess_data() -> None:
