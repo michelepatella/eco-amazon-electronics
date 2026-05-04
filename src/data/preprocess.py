@@ -68,13 +68,17 @@ def _build_user_item_maps(
     # Create (User ID, User Index) map
     map_users = {
         user_id: i
-        for i, user_id in enumerate(user_reviews[RAW_UR_USER_ID_COL].unique())
+        for i, user_id in enumerate(
+            sorted(user_reviews[RAW_UR_USER_ID_COL].unique())
+        )
     }
 
     # Create (Item ID, Item Index) map
     map_items = {
         item_id: i
-        for i, item_id in enumerate(user_reviews[RAW_UR_ASIN_COL].unique())
+        for i, item_id in enumerate(
+            sorted(user_reviews[RAW_UR_ASIN_COL].unique())
+        )
     }
 
     # Create (ASIN, Parent ASIN) map
@@ -185,8 +189,12 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
         None
     """
     # Calculate train and validation sizes
-    train_size = int(config.data.preprocessing.split.train_ratio * len(user_reviews))
-    valid_size = int(config.data.preprocessing.split.valid_ratio * len(user_reviews))
+    train_size = int(
+        config.data.preprocessing.split.train_ratio * len(user_reviews)
+    )
+    valid_size = int(
+        config.data.preprocessing.split.valid_ratio * len(user_reviews)
+    )
 
     # Split the dataset into train, validation, and test sets and
     # save them in RecBole format
@@ -215,7 +223,7 @@ def preprocess_data() -> None:
     Returns:
         None
     """
-    steps = tqdm(total=3)
+    steps = tqdm(total=4)
 
     # Load raw user reviews and sort chronologically by user and timestamp
     # to maintain temporal order of interactions for each user
