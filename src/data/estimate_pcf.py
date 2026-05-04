@@ -1,6 +1,7 @@
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from os import getenv
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -8,10 +9,8 @@ load_dotenv()
 
 
 def estimate_co2_for_product(product_data, llm_model, num_calls=4):
+    """Example of LLM prompting to predict the CO2eq of a product
     """
-    Example of LLM prompting to predict the CO2eq of a product
-    """
-
     prompt = f"""
     You are an expert in life cycle analysis (LCA) and CO2e emission calculation for electronic products.
     You must estimate the CO2e emissions, based on the entire life cycle (cradle to grave), for the following electronic product.
@@ -19,7 +18,7 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
     Product data: {json.dumps(product_data, ensure_ascii=False)}
 
     INSTRUCTIONS:
-    1. FIRST, check if there are any official carbon footprint reports or environmental product declarations (EPD) 
+    1. FIRST, check if there are any official carbon footprint reports or environmental product declarations (EPD)
        from the manufacturer for this specific product.
        If found, use these official values as your primary source.
 
@@ -79,7 +78,7 @@ def estimate_co2_for_product(product_data, llm_model, num_calls=4):
             responses.append(parsed)
 
         except Exception as e:
-            print(f"Error processing response: {str(e)}")
+            print(f"Error processing response: {e!s}")
             continue
 
     final_response = json.dumps(responses)
@@ -93,7 +92,7 @@ def main(num_rows, input_file, output_file, model):
     products = []
 
     # Split metadata file into several parts due to the size of the original file
-    with open(input_file, "r", encoding="utf-8") as f:
+    with open(input_file, encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_rows:
                 # This is due to the limits of the API
@@ -131,7 +130,7 @@ def main(num_rows, input_file, output_file, model):
 
                 except Exception as e:
                     print(
-                        f"Error processing product {product.get('name')[:60]}: {e}"
+                        f"Error processing product {product.get('name')[:60]}: {e}",
                     )
                     result = {
                         "name": product.get("name"),
@@ -146,7 +145,7 @@ def main(num_rows, input_file, output_file, model):
                         if not first_item:
                             out.write(",\n")
                         out.write(
-                            json.dumps(results_buffer[i], ensure_ascii=False)
+                            json.dumps(results_buffer[i], ensure_ascii=False),
                         )
                         first_item = False
                     batch_indices = []  # Reset batch

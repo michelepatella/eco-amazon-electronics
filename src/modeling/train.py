@@ -1,8 +1,9 @@
+import os
+
 import ray
+import torch
 from ray import tune
 from recbole.quick_start import run_recbole
-import os
-import torch
 
 
 def train_recbole(config, model_name, dataset_name, exp_name):
@@ -12,7 +13,7 @@ def train_recbole(config, model_name, dataset_name, exp_name):
     dataset_path = os.path.join(base_path, "dataset")
     config_str = f"lr_{config['lr']:.4f}_emb_{config['embedding_size']}_reg_{config['reg_weight']:.5f}"
     unique_checkpoint_dir = os.path.join(
-        base_path, "models", exp_name, config_str
+        base_path, "models", exp_name, config_str,
     )
 
     # Run training
@@ -82,7 +83,7 @@ def run_hpo(model_name, num_samples):
 # Configure device and initialize Ray
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 ray.init(
-    include_dashboard=True, dashboard_host="127.0.0.1", dashboard_port=8265
+    include_dashboard=True, dashboard_host="127.0.0.1", dashboard_port=8265,
 )
 
 # =============================================

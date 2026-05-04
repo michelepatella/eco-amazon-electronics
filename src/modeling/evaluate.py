@@ -1,14 +1,14 @@
-import torch
-import pandas as pd
 import numpy as np
+import pandas as pd
+import torch
 from recbole.evaluator import Evaluator
 from recbole.quick_start import load_data_and_model
 
-from src.utils import get_latest_checkpoint, get_co2e_kg_estimations
+from src.utils import get_co2e_kg_estimations, get_latest_checkpoint
 
 
 def calculate_average_pcf(
-    reranked_items_list, id_to_asin, scores_dict, dataset, k
+    reranked_items_list, id_to_asin, scores_dict, dataset, k,
 ):
     """Calculate average PCF across all the users based on the first-k recommendations."""
     total_pcf = 0
@@ -25,10 +25,11 @@ def calculate_average_pcf(
 
 
 def evaluate_model_results(
-    data, k, config, dataset, id_to_asin, co2e_scores, item_cnt
+    data, k, config, dataset, id_to_asin, co2e_scores, item_cnt,
 ):
     """Evaluate the RecSys both on RecBole and sustainability metrics, considering
-    the top-k recommendations."""
+    the top-k recommendations.
+    """
     # Retrieve top-k re-ranked items and prepare tensors
     # for RecBole (considering just the first-k items)
     reranked_items_list = data["reranked_items"]
@@ -36,10 +37,10 @@ def evaluate_model_results(
     reranked_items = torch.tensor(reranked_np, device=config["device"])
 
     pos_matrix = torch.tensor(data["pos_matrix"], device=config["device"])[
-        :, :k
+        :, :k,
     ]
     pos_len = torch.tensor(data["pos_len"], device=config["device"]).view(
-        -1, 1
+        -1, 1,
     )
 
     # Run RecBole evaluation, defining its configuration
@@ -54,7 +55,7 @@ def evaluate_model_results(
 
     # Calculate sustainability metrics
     avg_pcf_est = calculate_average_pcf(
-        reranked_items_list, id_to_asin, co2e_scores, dataset, k
+        reranked_items_list, id_to_asin, co2e_scores, dataset, k,
     )
 
     # Collect and clean results
@@ -112,7 +113,7 @@ co2e_scores = get_co2e_kg_estimations(model_tag)
 
 # Load item_index -> parent_asin mapping
 item_map_df = pd.read_csv(
-    "../2_recbole/process_data/maps/item_map.tsv", sep="\t"
+    "../2_recbole/process_data/maps/item_map.tsv", sep="\t",
 )
 id_to_asin = dict(zip(item_map_df["item_index"], item_map_df["parent_asin"]))
 
@@ -136,14 +137,14 @@ for model in models:
         data = torch.load(file_path, weights_only=False)
         for k_val in k_values:
             res = evaluate_model_results(
-                data, k_val, config, dataset, id_to_asin, co2e_scores, item_cnt
+                data, k_val, config, dataset, id_to_asin, co2e_scores, item_cnt,
             )
             all_final_results.append(res)
 
 # Save results
 df_final = pd.DataFrame(all_final_results)
 df_final = df_final.sort_values(
-    ["MODEL", "K", "ALPHA"], ascending=[True, True, False]
+    ["MODEL", "K", "ALPHA"], ascending=[True, True, False],
 )
 df_final.to_csv(f"results/{model_tag}/results.csv", index=False)
 

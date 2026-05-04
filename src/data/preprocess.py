@@ -2,6 +2,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.const import (
+    CONFIG_PATH,
     DATA_INTERIM_MAPS_IMAP_PATH,
     DATA_INTERIM_MAPS_UMAP_PATH,
     DATA_PROCESSED_AR23_UR_ELEC_FULL_PATH,
@@ -9,7 +10,6 @@ from src.const import (
     DATA_PROCESSED_AR23_UR_ELEC_TRAIN_PATH,
     DATA_PROCESSED_AR23_UR_ELEC_VALID_PATH,
     DATA_RAW_AR23_UR_ELEC_PATH,
-    CONFIG_PATH,
     DATASET_NAME_ELEC,
     MAPS_IMAP_ITEM_ID_COL,
     MAPS_IMAP_ITEM_INDEX_COL,
@@ -27,7 +27,6 @@ from src.const import (
 )
 from src.utils import load_config
 
-
 # Load configuration
 config = load_config(CONFIG_PATH)
 
@@ -43,8 +42,7 @@ if config.data.name == DATASET_NAME_ELEC:
 def _build_user_item_maps(
     user_reviews: pd.DataFrame,
 ) -> tuple[dict, list[tuple]]:
-    """
-    Build user and item maps from user reviews and save them.
+    """Build user and item maps from user reviews and save them.
 
     This function creates and saves two maps:
     - A map from user IDs to integer indices.
@@ -69,7 +67,7 @@ def _build_user_item_maps(
     map_users = {
         user_id: i
         for i, user_id in enumerate(
-            sorted(user_reviews[RAW_UR_USER_ID_COL].unique())
+            sorted(user_reviews[RAW_UR_USER_ID_COL].unique()),
         )
     }
 
@@ -77,7 +75,7 @@ def _build_user_item_maps(
     map_items = {
         item_id: i
         for i, item_id in enumerate(
-            sorted(user_reviews[RAW_UR_ASIN_COL].unique())
+            sorted(user_reviews[RAW_UR_ASIN_COL].unique()),
         )
     }
 
@@ -114,7 +112,7 @@ def _build_user_item_maps(
 
 
 def _binarize_user_reviews(
-    user_reviews: pd.DataFrame, map_users: dict, map_items: list[tuple]
+    user_reviews: pd.DataFrame, map_users: dict, map_items: list[tuple],
 ) -> pd.DataFrame:
     """Binarize ratings and save user-item interactions in RecBole format.
 
@@ -147,20 +145,20 @@ def _binarize_user_reviews(
     binarized_user_reviews = pd.DataFrame(
         {
             PROCESSED_UR_USER_ID_COL: user_reviews[RAW_UR_USER_ID_COL].map(
-                map_users
+                map_users,
             ),
             PROCESSED_UR_ITEM_ID_COL: user_reviews[RAW_UR_ASIN_COL].map(
-                {item_id: item_index for item_id, item_index, _ in map_items}
+                {item_id: item_index for item_id, item_index, _ in map_items},
             ),
             PROCESSED_UR_RATING_COL: (
                 user_reviews[RAW_UR_RATING_COL]
                 >= config.data.preprocessing.binarization.rating.threshold
             ).astype(int),
-        }
+        },
     ).reset_index(drop=True)
 
     binarized_user_reviews.to_csv(
-        processed_user_reviews_path, sep="\t", index=False
+        processed_user_reviews_path, sep="\t", index=False,
     )
 
     return binarized_user_reviews
@@ -201,16 +199,16 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
     # Group interactions by user and process each user's history temporally
     # to maintain chronological order within user interactions
     for _, user_interactions in user_reviews.groupby(
-        PROCESSED_UR_USER_ID_COL, sort=True
+        PROCESSED_UR_USER_ID_COL, sort=True,
     ):
         # Calculate split boundaries based on number of user interactions
         # ensuring each split respects the configured ratios
         num_interactions = len(user_interactions)
         train_size = int(
-            config.data.preprocessing.split.train_ratio * num_interactions
+            config.data.preprocessing.split.train_ratio * num_interactions,
         )
         valid_size = int(
-            config.data.preprocessing.split.valid_ratio * num_interactions
+            config.data.preprocessing.split.valid_ratio * num_interactions,
         )
 
         # Split user's temporal sequence: old -> train, recent -> valid,
@@ -218,7 +216,7 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
         # user's interaction history
         train_splits.append(user_interactions.iloc[:train_size])
         valid_splits.append(
-            user_interactions.iloc[train_size : train_size + valid_size]
+            user_interactions.iloc[train_size : train_size + valid_size],
         )
         test_splits.append(user_interactions.iloc[train_size + valid_size :])
 
@@ -231,7 +229,7 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
     # reproducibility. Valid and test sets preserve temporal order to ensure
     # realistic evaluation (model predicts future, not random past)
     train_df = train_df.sample(frac=1.0, random_state=config.seed).reset_index(
-        drop=True
+        drop=True,
     )
 
     # Filter validation and test to contain only items present in training set,
@@ -266,7 +264,7 @@ def preprocess_data() -> None:
     # to maintain temporal order of interactions for each user
     steps.set_description("Loading raw user reviews")
     user_reviews = pd.read_json(raw_user_reviews_path, lines=True).sort_values(
-        by=[RAW_UR_USER_ID_COL, RAW_UR_TIMESTAMP_COL]
+        by=[RAW_UR_USER_ID_COL, RAW_UR_TIMESTAMP_COL],
     )
     steps.update(1)
 
@@ -279,7 +277,7 @@ def preprocess_data() -> None:
     # matrix suitable for recommendation models, then shuffle for robustness
     steps.set_description("Binarizing user-item interactions")
     binarized_user_reviews = _binarize_user_reviews(
-        user_reviews, map_users, map_items
+        user_reviews, map_users, map_items,
     )
     steps.update(1)
 
