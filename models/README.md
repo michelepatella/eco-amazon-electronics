@@ -7,7 +7,7 @@ Directory for all trained recommendation models and their re-ranked predictions.
 dvc pull
 ```
 
-## `BPR/`
+## `electronics/BPR/`
 
 | Name | Type | Format | Dataset | Parameters | Size | Description |
 |------|------|--------|---------|-----------|------|-------------|
@@ -21,7 +21,7 @@ dvc pull
 | `predictions/openai_o3_mini/alpha_0_75.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.75` | - | Re-ranked BPR predictions on Openai o3-mini PCF estimates (relevance-first) |
 | `predictions/openai_o3_mini/alpha_1_0.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=1.00` | - | Re-ranked BPR predictions on Openai o3-mini PCF estimates (pure relevance, no sustainability) |
 
-## `LightGCN/`
+## `electronics/LightGCN/`
 
 | Name | Type | Format | Dataset | Parameters | Size | Description |
 |------|------|--------|---------|-----------|------|-------------|
