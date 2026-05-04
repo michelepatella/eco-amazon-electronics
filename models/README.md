@@ -1,34 +1,36 @@
 # `models/`
 
-```text
-.
-├── BPR
-│   ├── BPR.pth  <- BPR model trained
-│   └── predictions
-│       ├── gemini_2_5_flash
-│       │   ├── alpha_0_25.pth  <- BPR reranked predictions on Gemini 2.5 Flash PCF values (⍺=0.25)
-│       │   ├── alpha_0_5.pth  <- BPR reranked predictions on Gemini 2.5 Flash PCF values (⍺=0.5)
-│       │   ├── alpha_0_75.pth  <- BPR reranked predictions on Gemini 2.5 Flash PCF values (⍺=0.75)
-│       │   └── alpha_1_0.pth  <- BPR reranked predictions on Gemini 2.5 Flash PCF values (⍺=1.0)
-│       └── openai_o3_mini
-│           ├── alpha_0_25.pth  <- BPR reranked predictions on OpenAI o3-mini PCF values (⍺=0.25)
-│           ├── alpha_0_5.pth  <- BPR reranked predictions on OpenAI o3-mini PCF values (⍺=0.5)
-│           ├── alpha_0_75.pth  <- BPR reranked predictions on OpenAI o3-mini PCF values (⍺=0.75)
-│           └── alpha_1_0.pth  <- BPR reranked predictions on OpenAI o3-mini PCF values (⍺=1.0)
-├── LightGCN
-│   ├── LightGCN.pth  <- LightGCN model trained
-│   └── predictions
-│       ├── gemini_2_5_flash
-│       │   ├── alpha_0_25.pth  <- LGCN reranked predictions on Gemini 2.5 Flash PCF values (⍺=0.25)
-│       │   ├── alpha_0_5.pth  <- LGCN reranked predictions on Gemini 2.5 Flash PCF values (⍺=0.5)
-│       │   ├── alpha_0_75.pth  <- LGCN reranked predictions on Gemini 2.5 Flash PCF values (⍺=0.75)
-│       │   └── alpha_1_0.pth  <- LGCN reranked predictions on Gemini 2.5 Flash PCF values (⍺=1.0)
-│       └── openai_o3_mini
-│           ├── alpha_0_25.pth  <- LGCN reranked predictions on OpenAI o3-mini PCF values (⍺=0.25)
-│           ├── alpha_0_5.pth  <- LGCN reranked predictions on OpenAI o3-mini PCF values (⍺=0.5)
-│           ├── alpha_0_75.pth  <- LGCN reranked predictions on OpenAI o3-mini PCF values (⍺=0.75)
-│           └── alpha_1_0.pth  <- LGCN reranked predictions on OpenAI o3-mini PCF values (⍺=1.0)
-└── README.md  <- This file 
+Directory for all trained recommendation models and their sustainability-aware re-ranked predictions.
+
+**Note**: This project uses DVC to manage model files. Make sure `dvc` is installed, then pull all model artifacts from the remote bucket:
+```bash
+dvc pull
 ```
 
-**Note**: The repository doesn't include model files due to their size.
+## `BPR/`
+
+| Name | Type | Format | Dataset | Parameters | Size | Description |
+|------|------|--------|---------|-----------|------|-------------|
+| `BPR.pth` | Model | PyTorch | Amazon Reviews'23 (Electronics) | - | - | Trained BPR model on 15-core filtered, binarized user-item interactions |
+| `predictions/gemini_2_5_flash/alpha_0_25.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.25` | - | Re-ranked BPR predictions on Gemini 2.5 Flash PCF estimates (sustainability-first) |
+| `predictions/gemini_2_5_flash/alpha_0_5.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.50`| - | Re-ranked BPR predictions on Gemini 2.5 Flash PCF estimates (balanced relevance-sustainability trade-off) |
+| `predictions/gemini_2_5_flash/alpha_0_75.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.75` | - | Re-ranked BPR predictions on Gemini 2.5 Flash PCF estimates (relevance-first) |
+| `predictions/gemini_2_5_flash/alpha_1_0.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=1.00` | - | Re-ranked BPR predictions on Gemini 2.5 Flash PCF estimates (pure relevance, no sustainability) |
+| `predictions/openai_o3_mini/alpha_0_25.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.25` | - | Re-ranked BPR predictions on Openai o3-mini PCF estimates (sustainability-first) |
+| `predictions/openai_o3_mini/alpha_0_5.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.50` | - | Re-ranked BPR predictions on Openai o3-mini PCF estimates (balanced relevance-sustainability trade-off) |
+| `predictions/openai_o3_mini/alpha_0_75.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.75` | - | Re-ranked BPR predictions on Openai o3-mini PCF estimates (relevance-first) |
+| `predictions/openai_o3_mini/alpha_1_0.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=1.00` | - | Re-ranked BPR predictions on Openai o3-mini PCF estimates (pure relevance, no sustainability) |
+
+## `LightGCN/`
+
+| Name | Type | Format | Dataset | Parameters | Size | Description |
+|------|------|--------|---------|-----------|------|-------------|
+| `LightGCN.pth` | Model | PyTorch | Amazon Reviews'23 (Electronics) | - | - | Trained LightGCN model on 15-core filtered, binarized user-item interactions |
+| `predictions/gemini_2_5_flash/alpha_0_25.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.25` | - | Re-ranked LightGCN predictions on Gemini 2.5 Flash PCF estimates (sustainability-first) |
+| `predictions/gemini_2_5_flash/alpha_0_5.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.50` | - | Re-ranked LightGCN predictions on Gemini 2.5 Flash PCF estimates (balanced relevance-sustainability trade-off) |
+| `predictions/gemini_2_5_flash/alpha_0_75.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.75` | - | Re-ranked LightGCN predictions on Gemini 2.5 Flash PCF estimates (relevance-first) |
+| `predictions/gemini_2_5_flash/alpha_1_0.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=1.00` | - | Re-ranked LightGCN predictions on Gemini 2.5 Flash PCF estimates (pure relevance, no sustainability) |
+| `predictions/openai_o3_mini/alpha_0_25.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.25` | - | Re-ranked LightGCN predictions on OpenAI o3-mini PCF estimates (sustainability-first) |
+| `predictions/openai_o3_mini/alpha_0_5.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.50` | - | Re-ranked LightGCN predictions on OpenAI o3-mini PCF estimates (balanced relevance-sustainability trade-off) |
+| `predictions/openai_o3_mini/alpha_0_75.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=0.75` | - | Re-ranked LightGCN predictions on OpenAI o3-mini PCF estimates (relevance-first) |
+| `predictions/openai_o3_mini/alpha_1_0.pth` | Predictions | PyTorch | Amazon Reviews'23 (Electronics) | `alpha=1.00` | - | Re-ranked LightGCN predictions on OpenAI o3-mini PCF estimates (pure relevance, no sustainability) |
