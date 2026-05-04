@@ -135,6 +135,9 @@ CONFIG_PATH = f"{CONFIG_DIR}/config.yaml"
 # Dataset names
 DATASET_NAME_ELEC = "elec"
 
+# Supported datasets
+SUPPORTED_DATASETS = [DATASET_NAME_ELEC]
+
 # Raw user reviews
 RAW_UR_USER_ID_COL = "user_id"
 RAW_UR_ASIN_COL = "asin"

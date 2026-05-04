@@ -124,7 +124,7 @@ def _binarize_user_reviews(
     2. Binarizes ratings so that those greater than or equal to the positive threshold
        become 1 (positive) all others become 0 (negative), enabling implicit feedback 
        scenarios.
-    3. Shuffles and saves in RecBole format.
+    3. Saves in RecBole format.
 
     Args:
         user_reviews (pd.DataFrame):
