@@ -174,7 +174,9 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
     and the most recent to test. This approach prevents temporal leakage and
     creates a more realistic evaluation scenario. The training set is then
     shuffled for robustness while validation and test sets preserve temporal
-    order to ensure realistic evaluation conditions.
+    order to ensure realistic evaluation conditions. Additionally, the function
+    ensures that validation and test sets contain only items present in the
+    training set, preventing cold-start problems during model evaluation.
 
     For each user, interactions are ordered by timestamp and split as:
     - Train: oldest interactions (then shuffled)
@@ -232,6 +234,12 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
         drop=True
     )
 
+    # Filter validation and test to contain only items present in training set,
+    # preventing cold-start problems where model evaluates on unseen items
+    train_items = set(train_df[PROCESSED_UR_ITEM_ID_COL].unique())
+    valid_df = valid_df[valid_df[PROCESSED_UR_ITEM_ID_COL].isin(train_items)]
+    test_df = test_df[test_df[PROCESSED_UR_ITEM_ID_COL].isin(train_items)]
+
     # Save all splits in RecBole format
     train_df.to_csv(processed_user_reviews_train_path, sep="\t", index=False)
     valid_df.to_csv(processed_user_reviews_valid_path, sep="\t", index=False)
@@ -279,6 +287,7 @@ def preprocess_data() -> None:
     # each split separately for downstream model training and evaluation
     steps.set_description("Splitting user reviews into train/valid/test")
     _split_user_reviews(binarized_user_reviews)
+    steps.update(1)
     steps.set_description("Data preprocessing completed")
     steps.close()
 
