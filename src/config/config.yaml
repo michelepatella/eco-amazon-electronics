@@ -1,6 +1,8 @@
 data:
   name: "elec"
   preprocessing:
+    deduplication:
+      keep: "last"
     binarization:
       rating:
         threshold: 5

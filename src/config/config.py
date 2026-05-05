@@ -62,6 +62,43 @@ class RatingConfig(BaseModel):
     threshold: int = Field(ge=1, le=5)
 
 
+class DeduplicationConfig(BaseModel):
+    """Configuration for deduplication preprocessing step.
+
+    Defines how duplicate user-item interactions are handled.
+
+    Attributes:
+        keep (str):
+            Which duplicate to keep. Must be either 'first' (oldest)
+            or 'last' (most recent).
+    """
+
+    keep: str = Field()
+
+    @field_validator("keep")
+    @classmethod
+    def validate_keep_strategy(cls, v: str) -> str:
+        """Validate that keep strategy is valid.
+
+        Args:
+            v (str):
+                The keep strategy to validate.
+
+        Returns:
+            str:
+                The validated keep strategy.
+
+        Raises:
+            ValueError:
+                If keep strategy is not 'first' or 'last'.
+        """
+        if v not in ("first", "last"):
+            raise ValueError(
+                f"keep strategy must be 'first' or 'last', got '{v}'",
+            )
+        return v
+
+
 class BinarizationConfig(BaseModel):
     """Configuration for binarization preprocessing step.
 
@@ -82,12 +119,15 @@ class PreprocessingConfig(BaseModel):
     Combines configurations for different preprocessing stages.
 
     Attributes:
+        deduplication (DeduplicationConfig):
+            Configuration for deduplication.
         binarization (BinarizationConfig):
             Configuration for binarization.
         split (SplitConfig):
             Configuration for train/valid/test split.
     """
 
+    deduplication: DeduplicationConfig
     binarization: BinarizationConfig
     split: SplitConfig
 
