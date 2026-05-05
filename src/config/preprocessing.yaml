@@ -10,8 +10,7 @@ preprocessing:
   binarization:
     rating:
       # ------------------------------------------------------------------------------------
-      # Description: Threshold for binarizing ratings; interactions with ratings above
-      #              this threshold will be considered positive
+      # Description: Threshold for binarizing ratings
       # Type: int
       # Constraints: Must be in the range [1, 5]
       # ------------------------------------------------------------------------------------

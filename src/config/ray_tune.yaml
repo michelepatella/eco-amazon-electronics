@@ -91,11 +91,3 @@ ray_tune:
   # Constraints: Read Ray documentation (https://docs.ray.io/)
   # ------------------------------------------------------------------------------------
   namespace: "tuning"
-
-  # ------------------------------------------------------------------------------------
-  # Description: Directory for Ray to spill objects to disk when the object store memory
-  #              limit is exceeded
-  # Type: str
-  # Constraints: Read Ray documentation (https://docs.ray.io/)
-  # ------------------------------------------------------------------------------------
-  object_spilling_directory: "/tmp/ray_spill"
