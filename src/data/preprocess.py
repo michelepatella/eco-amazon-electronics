@@ -44,6 +44,34 @@ if config.data.name == DATASET_NAME_ELEC:
     processed_user_reviews_test_path = DATA_PROCESSED_AR23_UR_ELEC_TEST_PATH
 
 
+def _deduplicate_user_reviews(
+    user_reviews: pd.DataFrame,
+    keep: str,
+) -> pd.DataFrame:
+    """Remove duplicate user-item interactions, keeping the specified occurrence.
+
+    For duplicate (user_id, item_id) pairs, this function removes all but one
+    occurrence.
+
+    Args:
+        user_reviews (pd.DataFrame):
+            User reviews dataset with columns:
+            - "user_id": Unique identifier for users.
+            - "asin": Item identifier.
+
+        keep (str):
+            Which duplicate to keep.
+
+    Returns:
+        pd.DataFrame:
+            Deduplicated user reviews dataset.
+    """
+    return user_reviews.drop_duplicates(
+        subset=[RAW_UR_USER_ID_COL, RAW_UR_ASIN_COL],
+        keep=keep,
+    ).reset_index(drop=True)
+
+
 def _build_user_item_maps(
     user_reviews: pd.DataFrame,
 ) -> tuple[dict, list[tuple]]:
@@ -161,6 +189,7 @@ def _binarize_user_reviews(
                 user_reviews[RAW_UR_RATING_COL]
                 >= config.data.preprocessing.binarization.rating.threshold
             ).astype(int),
+            RAW_UR_TIMESTAMP_COL: user_reviews[RAW_UR_TIMESTAMP_COL].values,
         },
     ).reset_index(drop=True)
 
@@ -196,6 +225,7 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
             - "user_id:token": Mapped user index
             - "item_id:token": Mapped item index
             - "rating:float": Binary rating 0 or 1
+            - "timestamp:float": Interaction timestamp
 
     Returns:
         None
@@ -213,6 +243,9 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
     ):
         # Calculate split boundaries based on number of user interactions
         # ensuring each split respects the configured ratios
+        user_interactions = user_interactions.sort_values(
+            by=RAW_UR_TIMESTAMP_COL,
+        )
         num_interactions = len(user_interactions)
         train_size = int(
             config.data.preprocessing.split.train_ratio * num_interactions,
@@ -260,21 +293,30 @@ def preprocess_data() -> None:
     This function orchestrates the entire data preprocessing workflow, which
     consists of the following stages:
     1. Data Loading: Load raw user reviews sorted by user and time.
-    2. Mapping: Build user and item ID to index mappings
-    3. Binarization: Convert ratings to implicit feedback (0 or 1) and shuffle
-    4. Splitting: Partition interactions into train/validation/test sets
+    2. Deduplication: Remove duplicate user-item interactions (keep most recent).
+    3. Mapping: Build user and item ID to index mappings
+    4. Binarization: Convert ratings to implicit feedback (0 or 1)
+    5. Splitting: Partition interactions into train/validation/test sets
     All outputs are persisted to disk.
 
     Returns:
         None
     """
-    steps = tqdm(total=4)
+    steps = tqdm(total=5)
 
     # Load raw user reviews and sort chronologically by user and timestamp
     # to maintain temporal order of interactions for each user
     steps.set_description("Loading raw user reviews")
     user_reviews = pd.read_json(raw_user_reviews_path, lines=True).sort_values(
         by=[RAW_UR_USER_ID_COL, RAW_UR_TIMESTAMP_COL],
+    )
+    steps.update(1)
+
+    # Remove duplicate user-item interactions, keeping the most recent rating
+    steps.set_description("Deduplicating user-item interactions")
+    user_reviews = _deduplicate_user_reviews(
+        user_reviews,
+        keep=config.data.preprocessing.deduplication.keep,
     )
     steps.update(1)
 
