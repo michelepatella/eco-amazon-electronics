@@ -212,9 +212,11 @@ def _binarize_user_reviews(
             DATASET_PROCESSED_UR_RATING_COL: (
                 user_reviews[DATASET_RAW_UR_RATING_COL] >= threshold
             ).astype(int),
-            DATASET_PROCESSED_UR_TIMESTAMP_COL: user_reviews[
-                DATASET_RAW_UR_TIMESTAMP_COL
-            ].values,
+            DATASET_PROCESSED_UR_TIMESTAMP_COL: (
+                pd.to_datetime(
+                    user_reviews[DATASET_RAW_UR_TIMESTAMP_COL],
+                ).astype("int64")
+            ),
         },
     ).reset_index(drop=True)
 
