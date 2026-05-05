@@ -67,10 +67,18 @@ def _deduplicate_user_reviews(
         pd.DataFrame:
             Deduplicated user reviews dataset.
     """
-    return user_reviews.drop_duplicates(
+    # Remove duplicate user-item interactions
+    user_reviews = user_reviews.drop_duplicates(
         subset=[DATASET_RAW_UR_USER_ID_COL, DATASET_RAW_UR_ASIN_COL],
         keep=keep,
     ).reset_index(drop=True)
+
+    # Sanity check
+    assert not user_reviews.duplicated(
+        subset=[DATASET_RAW_UR_USER_ID_COL, DATASET_RAW_UR_ASIN_COL],
+    ).any()
+
+    return user_reviews
 
 
 def _build_user_item_maps(
@@ -142,6 +150,12 @@ def _build_user_item_maps(
         ],
     ).to_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t", index=False)
 
+    # Sanity checks
+    assert len(map_users) == user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()
+    assert len(map_items) == user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()
+    assert set(map_users.values()) == set(range(len(map_users)))
+    assert set(idx for _, idx, _ in map_items) == set(range(len(map_items)))
+
     return map_users, map_items
 
 
@@ -209,6 +223,14 @@ def _binarize_user_reviews(
         sep="\t",
         index=False,
     )
+
+    # Sanity checks
+    assert not binarized_user_reviews.isna().any().any()
+    assert set(
+        binarized_user_reviews[DATASET_PROCESSED_UR_RATING_COL].unique(),
+    ).issubset({0, 1})
+    assert binarized_user_reviews[DATASET_PROCESSED_UR_USER_ID_COL].min() >= 0
+    assert binarized_user_reviews[DATASET_PROCESSED_UR_ITEM_ID_COL].min() >= 0
 
     return binarized_user_reviews
 
@@ -314,6 +336,18 @@ def _split_user_reviews(
     train_df.to_csv(processed_user_reviews_train_path, sep="\t", index=False)
     valid_df.to_csv(processed_user_reviews_valid_path, sep="\t", index=False)
     test_df.to_csv(processed_user_reviews_test_path, sep="\t", index=False)
+
+    # Sanity checks
+    assert not train_df.isna().any().any()
+    assert not valid_df.isna().any().any()
+    assert not test_df.isna().any().any()
+    train_items = set(train_df[DATASET_PROCESSED_UR_ITEM_ID_COL])
+    assert set(valid_df[DATASET_PROCESSED_UR_ITEM_ID_COL]).issubset(
+        train_items,
+    )
+    assert set(test_df[DATASET_PROCESSED_UR_ITEM_ID_COL]).issubset(train_items)
+    assert len(train_df) > 0
+    assert train_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() > 0
 
 
 def preprocess_data() -> None:

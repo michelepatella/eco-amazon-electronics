@@ -45,7 +45,7 @@ class SplitConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    def check_sum(self) -> SplitConfig:
+    def check_sum(self) -> "SplitConfig":  # noqa
         """Validate the split ratios sum.
 
         Returns:
