@@ -155,20 +155,17 @@ class PreprocessingConfig(BaseModel):
     split: SplitConfig
 
 
-class DataConfig(BaseModel):
+class DatasetConfig(BaseModel):
     """Configuration for data-related settings.
 
-    Aggregates configuration for the data.
+    Specifies the dataset to use.
 
     Attributes:
         name (str):
             Name of the dataset.
-        preprocessing (PreprocessingConfig):
-            Preprocessing configuration for the dataset.
     """
 
     name: str = Field()
-    preprocessing: PreprocessingConfig
 
     @field_validator("name")
     @classmethod
@@ -201,11 +198,14 @@ class Config(BaseModel):
     Top-level configuration that aggregates all other configuration sections.
 
     Attributes:
-        data (DataConfig):
-            Data configuration.
+        dataset (DatasetConfig):
+            Dataset configuration.
+        preprocessing (PreprocessingConfig):
+            Preprocessing configuration.
         seed (int):
             Random seed for reproducibility.
     """
 
-    data: DataConfig
+    dataset: DatasetConfig
+    preprocessing: PreprocessingConfig
     seed: int = Field(ge=0)

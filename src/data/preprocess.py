@@ -37,7 +37,7 @@ from src.utils import load_config
 config = load_config(CONFIG_PATH)
 
 # Determine paths based on dataset name
-if config.data.name == DATASET_NAME_ELEC:
+if config.dataset.name == DATASET_NAME_ELEC:
     raw_user_reviews_path = DATA_RAW_AR23_UR_ELEC_PATH
     processed_user_reviews_path = DATA_PROCESSED_AR23_UR_ELEC_FULL_PATH
     processed_user_reviews_train_path = DATA_PROCESSED_AR23_UR_ELEC_TRAIN_PATH
@@ -381,7 +381,7 @@ def preprocess_data() -> None:
     steps.set_description("Deduplicating user-item interactions")
     user_reviews = _deduplicate_user_reviews(
         user_reviews,
-        keep=config.data.preprocessing.deduplication.keep,
+        keep=config.preprocessing.deduplication.keep,
     )
     steps.update(1)
 
@@ -397,7 +397,7 @@ def preprocess_data() -> None:
         user_reviews,
         map_users,
         map_items,
-        threshold=config.data.preprocessing.binarization.rating.threshold,
+        threshold=config.preprocessing.binarization.rating.threshold,
     )
     steps.update(1)
 
@@ -406,8 +406,8 @@ def preprocess_data() -> None:
     steps.set_description("Splitting user reviews into train/valid/test")
     _split_user_reviews(
         binarized_user_reviews,
-        train_ratio=config.data.preprocessing.split.train_ratio,
-        valid_ratio=config.data.preprocessing.split.valid_ratio,
+        train_ratio=config.preprocessing.split.train_ratio,
+        valid_ratio=config.preprocessing.split.valid_ratio,
         seed=config.seed,
     )
     steps.update(1)

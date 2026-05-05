@@ -116,7 +116,7 @@ SPLIT_RATIO_SUM_TOL = 1e-6
 # DEDUPLICATION KEEP STRATEGIES
 # ============================================================================
 
-# Deduplication configuration
+# Deduplication strategies
 DEDUP_KEEP_STRATEGY_FIRST = "first"
 DEDUP_KEEP_STRATEGY_LAST = "last"
 DEDUP_KEEP_STRATEGIES = (
