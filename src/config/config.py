@@ -5,7 +5,15 @@ Configuration module.
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from src.const import SUPPORTED_DATASETS
+from src.const import (
+    DEDUP_KEEP_STRATEGIES,
+    RATING_MAX_VALUE,
+    RATING_MIN_VALUE,
+    SPLIT_RATIO_MAX_VALUE,
+    SPLIT_RATIO_MIN_VALUE,
+    SPLIT_RATIO_SUM_TOL,
+    SUPPORTED_DATASETS,
+)
 
 
 class SplitConfig(BaseModel):
@@ -16,20 +24,29 @@ class SplitConfig(BaseModel):
 
     Attributes:
         train_ratio (float):
-            Proportion of data for training. Must be in [0.0, 1.0].
+            Proportion of data for training.
         valid_ratio (float):
-            Proportion of data for validation. Must be in [0.0, 1.0].
+            Proportion of data for validation.
         test_ratio (float):
-            Proportion of data for testing. Must be in [0.0, 1.0].
+            Proportion of data for testing.
     """
 
-    train_ratio: float = Field(ge=0.0, le=1.0)
-    valid_ratio: float = Field(ge=0.0, le=1.0)
-    test_ratio: float = Field(ge=0.0, le=1.0)
+    train_ratio: float = Field(
+        ge=SPLIT_RATIO_MIN_VALUE,
+        le=SPLIT_RATIO_MAX_VALUE,
+    )
+    valid_ratio: float = Field(
+        ge=SPLIT_RATIO_MIN_VALUE,
+        le=SPLIT_RATIO_MAX_VALUE,
+    )
+    test_ratio: float = Field(
+        ge=SPLIT_RATIO_MIN_VALUE,
+        le=SPLIT_RATIO_MAX_VALUE,
+    )
 
     @model_validator(mode="after")
     def check_sum(self) -> SplitConfig:
-        """Validate that split ratios sum to 1.0.
+        """Validate the split ratios sum.
 
         Returns:
             SplitConfig:
@@ -37,12 +54,16 @@ class SplitConfig(BaseModel):
 
         Raises:
             ValueError:
-                If the sum of ratios does not equal 1.0 within tolerance.
+                If the sum of ratios does not equal the predefined value
+                within tolerance.
         """
         total = self.train_ratio + self.valid_ratio + self.test_ratio
-        if abs(total - 1.0) > 1e-6:
+        if (
+            abs(total - (SPLIT_RATIO_MAX_VALUE - SPLIT_RATIO_MIN_VALUE))
+            > SPLIT_RATIO_SUM_TOL
+        ):
             raise ValueError(
-                "train_ratio + valid_ratio + test_ratio must sum to 1.0",
+                f"train_ratio + valid_ratio + test_ratio must sum to {SPLIT_RATIO_MAX_VALUE - SPLIT_RATIO_MIN_VALUE}",
             )
         return self
 
@@ -55,11 +76,13 @@ class RatingConfig(BaseModel):
 
     Attributes:
         threshold (int):
-            Rating threshold for binarization. Must be in range [1, 5]
-            to match standard Amazon review scale.
+            Rating threshold for binarization.
     """
 
-    threshold: int = Field(ge=1, le=5)
+    threshold: int = Field(
+        ge=RATING_MIN_VALUE,
+        le=RATING_MAX_VALUE,
+    )
 
 
 class DeduplicationConfig(BaseModel):
@@ -69,8 +92,7 @@ class DeduplicationConfig(BaseModel):
 
     Attributes:
         keep (str):
-            Which duplicate to keep. Must be either 'first' (oldest)
-            or 'last' (most recent).
+            Which duplicate to keep.
     """
 
     keep: str = Field()
@@ -90,11 +112,12 @@ class DeduplicationConfig(BaseModel):
 
         Raises:
             ValueError:
-                If keep strategy is not 'first' or 'last'.
+                If keep strategy is not valid.
         """
-        if v not in ("first", "last"):
+        if v not in DEDUP_KEEP_STRATEGIES:
             raise ValueError(
-                f"keep strategy must be 'first' or 'last', got '{v}'",
+                f"keep strategy must be one of {DEDUP_KEEP_STRATEGIES}, "
+                f"got '{v}'",
             )
         return v
 
@@ -139,7 +162,7 @@ class DataConfig(BaseModel):
 
     Attributes:
         name (str):
-            Name of the dataset. Must be one of the supported datasets.
+            Name of the dataset.
         preprocessing (PreprocessingConfig):
             Preprocessing configuration for the dataset.
     """
@@ -181,7 +204,7 @@ class Config(BaseModel):
         data (DataConfig):
             Data configuration.
         seed (int):
-            Random seed for reproducibility. Must be non-negative.
+            Random seed for reproducibility.
     """
 
     data: DataConfig
