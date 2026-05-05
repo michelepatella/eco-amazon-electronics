@@ -1,15 +1,32 @@
 import glob
 import json
 import os
+from pathlib import Path
 
 import yaml
-from src.config.config import Config
+from box import Box
+
+from src.const import CONFIG_DIR
 
 
-def load_config(path: str) -> Config:
-    with open(path, encoding="utf-8") as f:
-        raw = yaml.safe_load(f)
-    return Config.model_validate(raw)
+def load_config() -> Box:
+    cfg = {}
+    for f in sorted(Path(CONFIG_DIR).glob("*.yaml")):
+        with open(f, encoding="utf-8") as file:
+            data = yaml.safe_load(file) or {}
+            stack = [(cfg, data)]
+            while stack:
+                base, update = stack.pop()
+                for k, v in update.items():
+                    if (
+                        k in base
+                        and isinstance(base[k], dict)
+                        and isinstance(v, dict)
+                    ):
+                        stack.append((base[k], v))
+                    else:
+                        base[k] = v
+    return Box(cfg)
 
 
 def get_latest_checkpoint(model_name):

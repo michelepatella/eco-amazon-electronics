@@ -7,7 +7,6 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.const import (
-    CONFIG_PATH,
     DATA_INTERIM_MAPS_IMAP_PATH,
     DATA_INTERIM_MAPS_UMAP_PATH,
     DATA_PROCESSED_AR23_UR_ELEC_FULL_PATH,
@@ -30,13 +29,17 @@ from src.const import (
     MAP_IMAP_PARENT_ASIN_COL,
     MAP_UMAP_USER_ID_COL,
     MAP_UMAP_USER_INDEX_COL,
+    SUPPORTED_DATASETS,
 )
 from src.utils import load_config
 
 # Load configuration
-config = load_config(CONFIG_PATH)
+config = load_config()
 
 # Determine paths based on dataset name
+assert config.dataset.name in SUPPORTED_DATASETS, (
+    f"Supported dataset: {SUPPORTED_DATASETS}, got: {config.dataset.name}"
+)
 if config.dataset.name == DATASET_NAME_ELEC:
     raw_user_reviews_path = DATA_RAW_AR23_UR_ELEC_PATH
     processed_user_reviews_path = DATA_PROCESSED_AR23_UR_ELEC_FULL_PATH
@@ -408,7 +411,7 @@ def preprocess_data() -> None:
         binarized_user_reviews,
         train_ratio=config.preprocessing.split.train_ratio,
         valid_ratio=config.preprocessing.split.valid_ratio,
-        seed=config.seed,
+        seed=config.preprocessing.split.seed,
     )
     steps.update(1)
     steps.set_description("Data preprocessing completed")
