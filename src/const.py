@@ -6,42 +6,6 @@ Centralize all constant values used across the project.
 """
 
 # ============================================================================
-# ABBREVIATIONS
-# ============================================================================
-# AR23 = Amazon Reviews'23
-# ASIN = Amazon Standard Identification Number
-# BAL = Balanced relevance-sustainability trade-off
-# BPR = Bayesian Personalized Ranking
-# COL = Column
-# CONFIG = Configuration
-# DEDUP = Deduplication
-# DIR = Directory
-# ELEC = Electronics
-# FULL = Full dataset
-# G25F = Gemini 2.5 Flash
-# GT = Ground Truths
-# ID = Identifier
-# IM = Item Metadata
-# IMAP = Item Map
-# LLM = Large Language Model
-# LIGHTGCN = Light Graph Convolutional Network
-# MAX = Maximum
-# MIN = Minimum
-# O3M = OpenAI O3 Mini
-# PREDS = Predictions
-# PURE = Pure relevance, no sustainability
-# REL = Relevance-first
-# SRC = Source
-# SUS = Sustainability-first
-# TEST = Test set
-# TOL = Tolerance
-# TRAIN = Training set
-# UMAP = User Map
-# UR = User Reviews
-# VALID = Validation set
-# ============================================================================
-
-# ============================================================================
 # DATASETS
 # ============================================================================
 
@@ -94,35 +58,6 @@ LLM_NAME_O3M = "openai_o3_mini"
 
 # Supported LLMs
 SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
-
-# ============================================================================
-# RATINGS
-# ============================================================================
-
-# Rating boundaries
-RATING_MIN_VALUE = 1
-RATING_MAX_VALUE = 5
-
-# ============================================================================
-# SPLIT RATIOS
-# ============================================================================
-
-# Split boundaries and tolerance
-SPLIT_RATIO_MIN_VALUE = 0.0
-SPLIT_RATIO_MAX_VALUE = 1.0
-SPLIT_RATIO_SUM_TOL = 1e-6
-
-# ============================================================================
-# DEDUPLICATION KEEP STRATEGIES
-# ============================================================================
-
-# Deduplication strategies
-DEDUP_KEEP_STRATEGY_FIRST = "first"
-DEDUP_KEEP_STRATEGY_LAST = "last"
-DEDUP_KEEP_STRATEGIES = (
-    DEDUP_KEEP_STRATEGY_FIRST,
-    DEDUP_KEEP_STRATEGY_LAST,
-)
 
 # ============================================================================
 # RE-RANKING ALPHAS
@@ -218,45 +153,51 @@ DATA_PROCESSED_GT_O3M_ELEC_PATH = (
     f"{DATA_PROCESSED_GT_O3M_DIR}/{DATASET_NAME_ELEC}.jsonl"
 )
 
-# Models directory
+# Model directories
 MODELS_DIR = "models"
+MODELS_ELEC_DIR = f"{MODELS_DIR}/{DATASET_NAME_ELEC}"
 
 # Models BPR directories
-MODELS_BPR_DIR = f"{MODELS_DIR}/{MODEL_NAME_BPR}"
-MODELS_BPR_PREDS_DIR = f"{MODELS_BPR_DIR}/predictions"
-MODELS_BPR_PREDS_G25F_DIR = f"{MODELS_BPR_PREDS_DIR}/{LLM_NAME_G25F}"
-MODELS_BPR_PREDS_O3M_DIR = f"{MODELS_BPR_PREDS_DIR}/{LLM_NAME_O3M}"
+MODELS_ELEC_BPR_DIR = f"{MODELS_ELEC_DIR}/{MODEL_NAME_BPR}"
+MODELS_ELEC_BPR_PREDS_DIR = f"{MODELS_ELEC_BPR_DIR}/predictions"
+MODELS_ELEC_BPR_PREDS_G25F_DIR = f"{MODELS_ELEC_BPR_PREDS_DIR}/{LLM_NAME_G25F}"
+MODELS_ELEC_BPR_PREDS_O3M_DIR = f"{MODELS_ELEC_BPR_PREDS_DIR}/{LLM_NAME_O3M}"
 
 # Models LightGCN directories
-MODELS_LIGHTGCN_DIR = f"{MODELS_DIR}/{MODEL_NAME_LIGHTGCN}"
-MODELS_LIGHTGCN_PREDS_DIR = f"{MODELS_LIGHTGCN_DIR}/predictions"
-MODELS_LIGHTGCN_PREDS_G25F_DIR = f"{MODELS_LIGHTGCN_PREDS_DIR}/{LLM_NAME_G25F}"
-MODELS_LIGHTGCN_PREDS_O3M_DIR = f"{MODELS_LIGHTGCN_PREDS_DIR}/{LLM_NAME_O3M}"
+MODELS_ELEC_LIGHTGCN_DIR = f"{MODELS_ELEC_DIR}/{MODEL_NAME_LIGHTGCN}"
+MODELS_ELEC_LIGHTGCN_PREDS_DIR = f"{MODELS_ELEC_LIGHTGCN_DIR}/predictions"
+MODELS_ELEC_LIGHTGCN_PREDS_G25F_DIR = (
+    f"{MODELS_ELEC_LIGHTGCN_PREDS_DIR}/{LLM_NAME_G25F}"
+)
+MODELS_ELEC_LIGHTGCN_PREDS_O3M_DIR = (
+    f"{MODELS_ELEC_LIGHTGCN_PREDS_DIR}/{LLM_NAME_O3M}"
+)
 
 # Models BPR paths
-MODELS_BPR_PATH = f"{MODELS_BPR_DIR}/{MODEL_NAME_BPR}.pth"
-MODELS_BPR_PREDS_G25F_SUS_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
-MODELS_BPR_PREDS_G25F_BAL_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
-MODELS_BPR_PREDS_G25F_REL_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
-MODELS_BPR_PREDS_G25F_PURE_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
-MODELS_BPR_PREDS_O3M_SUS_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
-MODELS_BPR_PREDS_O3M_BAL_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
-MODELS_BPR_PREDS_O3M_REL_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
-MODELS_BPR_PREDS_O3M_PURE_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PATH = f"{MODELS_ELEC_BPR_DIR}/{MODEL_NAME_BPR}.pth"
+MODELS_ELEC_BPR_PREDS_G25F_SUS_PATH = f"{MODELS_ELEC_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PREDS_G25F_BAL_PATH = f"{MODELS_ELEC_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PREDS_G25F_REL_PATH = f"{MODELS_ELEC_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PREDS_G25F_PURE_PATH = f"{MODELS_ELEC_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PREDS_O3M_SUS_PATH = f"{MODELS_ELEC_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PREDS_O3M_BAL_PATH = f"{MODELS_ELEC_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PREDS_O3M_REL_PATH = f"{MODELS_ELEC_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_ELEC_BPR_PREDS_O3M_PURE_PATH = f"{MODELS_ELEC_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
 
 # Models LightGCN paths
-MODELS_LIGHTGCN_PATH = f"{MODELS_LIGHTGCN_DIR}/{MODEL_NAME_LIGHTGCN}.pth"
-MODELS_LIGHTGCN_PREDS_G25F_SUS_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
-MODELS_LIGHTGCN_PREDS_G25F_BAL_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
-MODELS_LIGHTGCN_PREDS_G25F_REL_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
-MODELS_LIGHTGCN_PREDS_G25F_PURE_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
-MODELS_LIGHTGCN_PREDS_O3M_SUS_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
-MODELS_LIGHTGCN_PREDS_O3M_BAL_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
-MODELS_LIGHTGCN_PREDS_O3M_REL_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
-MODELS_LIGHTGCN_PREDS_O3M_PURE_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PATH = (
+    f"{MODELS_ELEC_LIGHTGCN_DIR}/{MODEL_NAME_LIGHTGCN}.pth"
+)
+MODELS_ELEC_LIGHTGCN_PREDS_G25F_SUS_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PREDS_G25F_BAL_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PREDS_G25F_REL_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PREDS_G25F_PURE_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PREDS_O3M_SUS_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PREDS_O3M_BAL_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PREDS_O3M_REL_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_ELEC_LIGHTGCN_PREDS_O3M_PURE_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
 
 # Config directory
 CONFIG_DIR = f"{SRC_DIR}/config"
 
 # Config paths
-CONFIG_PATH = f"{CONFIG_DIR}/config.yaml"
