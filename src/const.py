@@ -6,10 +6,113 @@ Centralize all constant values used across the project.
 """
 
 # ============================================================================
+# RE-RANKING ALPHAS
+# ============================================================================
+# Abbreviations:
+# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# SUS = Sustainability-first
+# BAL = Balanced relevance-sustainability trade-off
+# REL = Relevance-first
+# PURE = Pure relevance, no sustainability
+# ============================================================================
+
+# Re-ranking alpha values
+RERANKING_ALPHA_SUS = 0.25
+RERANKING_ALPHA_BAL = 0.5
+RERANKING_ALPHA_REL = 0.75
+RERANKING_ALPHA_PURE = 1.0
+
+# Supported re-ranking alpha values
+SUPPORTED_RERANKING_ALPHAS = [
+    RERANKING_ALPHA_SUS,
+    RERANKING_ALPHA_BAL,
+    RERANKING_ALPHA_REL,
+    RERANKING_ALPHA_PURE,
+]
+
+# ============================================================================
+# MODELS AND LLMS
+# ============================================================================
+# Abbreviations:
+# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# BPR = Bayesian Personalized Ranking
+# LIGHTGCN = Light Graph Convolutional Network
+# LLM = Large Language Model
+# G25F = Gemini 2.5 Flash
+# O3M = OpenAI O3 Mini
+# ============================================================================
+
+# Model names
+MODEL_NAME_BPR = "BPR"
+MODEL_NAME_LIGHTGCN = "LightGCN"
+
+# Supported models
+SUPPORTED_MODELS = [MODEL_NAME_BPR, MODEL_NAME_LIGHTGCN]
+
+# LLM names
+LLM_NAME_G25F = "gemini_2_5_flash"
+LLM_NAME_O3M = "openai_o3_mini"
+
+# Supported LLMs
+SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
+
+# ============================================================================
+# DATASETS
+# ============================================================================
+# Abbreviations:
+# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# ELEC = Electronics
+# UR = User Reviews
+# COL = Column
+# ASIN = Amazon Standard Identification Number
+# ID = Identifier
+# ============================================================================
+
+# Dataset names
+DATASET_NAME_ELEC = "electronics"
+
+# Supported datasets
+SUPPORTED_DATASETS = [DATASET_NAME_ELEC]
+
+# Dataset raw user reviews columns
+DATASET_RAW_UR_USER_ID_COL = "user_id"
+DATASET_RAW_UR_ASIN_COL = "asin"
+DATASET_RAW_UR_PARENT_ASIN_COL = "parent_asin"
+DATASET_RAW_UR_TIMESTAMP_COL = "timestamp"
+DATASET_RAW_UR_RATING_COL = "rating"
+
+# Dataset processed user reviews columns
+DATASET_PROCESSED_UR_USER_ID_COL = "user_id:token"
+DATASET_PROCESSED_UR_ITEM_ID_COL = "item_id:token"
+DATASET_PROCESSED_UR_RATING_COL = "rating:float"
+DATASET_PROCESSED_UR_TIMESTAMP_COL = "timestamp:float"
+
+# ============================================================================
+# MAPS
+# ============================================================================
+# Abbreviations:
+# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# UMAP = User Map
+# IMAP = Item Map
+# COL = Column
+# ASIN = Amazon Standard Identification Number
+# ============================================================================
+
+# User map columns
+MAP_UMAP_USER_ID_COL = "user_id"
+MAP_UMAP_USER_INDEX_COL = "user_index"
+
+# Item map columns
+MAP_IMAP_ITEM_ID_COL = "item_id"
+MAP_IMAP_ITEM_INDEX_COL = "item_index"
+MAP_IMAP_PARENT_ASIN_COL = "parent_asin"
+
+# ============================================================================
 # DIRECTORIES AND PATHS
 # ============================================================================
 # Abbreviations:
 # ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# SRC = Source
 # DIR = Directory
 # AR23 = Amazon Reviews'23
 # GT = Ground Truths
@@ -29,8 +132,13 @@ Centralize all constant values used across the project.
 # BAL = Balanced relevance-sustainability trade-off
 # REL = Relevance-first
 # PURE = Pure relevance, no sustainability
+# BPR = Bayesian Personalized Ranking
+# LIGHTGCN = Light Graph Convolutional Network
 # CONFIG = Configuration
 # ============================================================================
+
+# Source directory
+SRC_DIR = "src"
 
 # Data directory
 DATA_DIR = "data"
@@ -51,19 +159,25 @@ DATA_PROCESSED_DIR = f"{DATA_DIR}/processed"
 DATA_PROCESSED_AR23_DIR = f"{DATA_PROCESSED_DIR}/amazon_reviews_23"
 DATA_PROCESSED_AR23_IM_DIR = f"{DATA_PROCESSED_AR23_DIR}/item_metadata"
 DATA_PROCESSED_AR23_IM_G25F_DIR = (
-    f"{DATA_PROCESSED_AR23_IM_DIR}/gemini_2_5_flash"
+    f"{DATA_PROCESSED_AR23_IM_DIR}/{LLM_NAME_G25F}"
 )
-DATA_PROCESSED_AR23_IM_O3M_DIR = f"{DATA_PROCESSED_AR23_IM_DIR}/openai_o3_mini"
+DATA_PROCESSED_AR23_IM_O3M_DIR = f"{DATA_PROCESSED_AR23_IM_DIR}/{LLM_NAME_O3M}"
 DATA_PROCESSED_AR23_UR_DIR = f"{DATA_PROCESSED_AR23_DIR}/user_reviews"
-DATA_PROCESSED_AR23_UR_ELEC_DIR = f"{DATA_PROCESSED_AR23_UR_DIR}/electronics"
+DATA_PROCESSED_AR23_UR_ELEC_DIR = (
+    f"{DATA_PROCESSED_AR23_UR_DIR}/{DATASET_NAME_ELEC}"
+)
 DATA_PROCESSED_GT_DIR = f"{DATA_PROCESSED_DIR}/ground_truths"
-DATA_PROCESSED_GT_G25F_DIR = f"{DATA_PROCESSED_GT_DIR}/gemini_2_5_flash"
-DATA_PROCESSED_GT_O3M_DIR = f"{DATA_PROCESSED_GT_DIR}/openai_o3_mini"
+DATA_PROCESSED_GT_G25F_DIR = f"{DATA_PROCESSED_GT_DIR}/{LLM_NAME_G25F}"
+DATA_PROCESSED_GT_O3M_DIR = f"{DATA_PROCESSED_GT_DIR}/{LLM_NAME_O3M}"
 
 # Data raw paths
-DATA_RAW_AR23_IM_ELEC_PATH = f"{DATA_RAW_AR23_IM_DIR}/electronics.jsonl"
-DATA_RAW_AR23_UR_ELEC_PATH = f"{DATA_RAW_AR23_UR_DIR}/electronics.jsonl"
-DATA_RAW_GT_ELEC_PATH = f"{DATA_RAW_GT_DIR}/electronics.jsonl"
+DATA_RAW_AR23_IM_ELEC_PATH = (
+    f"{DATA_RAW_AR23_IM_DIR}/{DATASET_NAME_ELEC}.jsonl"
+)
+DATA_RAW_AR23_UR_ELEC_PATH = (
+    f"{DATA_RAW_AR23_UR_DIR}/{DATASET_NAME_ELEC}.jsonl"
+)
+DATA_RAW_GT_ELEC_PATH = f"{DATA_RAW_GT_DIR}/{DATASET_NAME_ELEC}.jsonl"
 
 # Data interim paths
 DATA_INTERIM_MAPS_UMAP_PATH = f"{DATA_INTERIM_MAPS_DIR}/user_map.tsv"
@@ -71,124 +185,69 @@ DATA_INTERIM_MAPS_IMAP_PATH = f"{DATA_INTERIM_MAPS_DIR}/item_map.tsv"
 
 # Data processed paths
 DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH = (
-    f"{DATA_PROCESSED_AR23_IM_G25F_DIR}/electronics.jsonl"
+    f"{DATA_PROCESSED_AR23_IM_G25F_DIR}/{DATASET_NAME_ELEC}.jsonl"
 )
 DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH = (
-    f"{DATA_PROCESSED_AR23_IM_O3M_DIR}/electronics.jsonl"
+    f"{DATA_PROCESSED_AR23_IM_O3M_DIR}/{DATASET_NAME_ELEC}.jsonl"
 )
 DATA_PROCESSED_AR23_UR_ELEC_FULL_PATH = (
-    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/electronics.inter"
+    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/{DATASET_NAME_ELEC}.inter"
 )
 DATA_PROCESSED_AR23_UR_ELEC_TRAIN_PATH = (
-    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/electronics.train.inter"
+    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/{DATASET_NAME_ELEC}.train.inter"
 )
 DATA_PROCESSED_AR23_UR_ELEC_TEST_PATH = (
-    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/electronics.test.inter"
+    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/{DATASET_NAME_ELEC}.test.inter"
 )
 DATA_PROCESSED_AR23_UR_ELEC_VALID_PATH = (
-    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/electronics.valid.inter"
+    f"{DATA_PROCESSED_AR23_UR_ELEC_DIR}/{DATASET_NAME_ELEC}.valid.inter"
 )
 DATA_PROCESSED_GT_G25F_ELEC_PATH = (
-    f"{DATA_PROCESSED_GT_G25F_DIR}/electronics.jsonl"
+    f"{DATA_PROCESSED_GT_G25F_DIR}/{DATASET_NAME_ELEC}.jsonl"
 )
 DATA_PROCESSED_GT_O3M_ELEC_PATH = (
-    f"{DATA_PROCESSED_GT_O3M_DIR}/electronics.jsonl"
+    f"{DATA_PROCESSED_GT_O3M_DIR}/{DATASET_NAME_ELEC}.jsonl"
 )
 
 # Models directory
 MODELS_DIR = "models"
 
 # Models BPR directories
-MODELS_BPR_DIR = f"{MODELS_DIR}/BPR"
+MODELS_BPR_DIR = f"{MODELS_DIR}/{MODEL_NAME_BPR}"
 MODELS_BPR_PREDS_DIR = f"{MODELS_BPR_DIR}/predictions"
-MODELS_BPR_PREDS_G25F_DIR = f"{MODELS_BPR_PREDS_DIR}/gemini_2_5_flash"
-MODELS_BPR_PREDS_O3M_DIR = f"{MODELS_BPR_PREDS_DIR}/openai_o3_mini"
+MODELS_BPR_PREDS_G25F_DIR = f"{MODELS_BPR_PREDS_DIR}/{LLM_NAME_G25F}"
+MODELS_BPR_PREDS_O3M_DIR = f"{MODELS_BPR_PREDS_DIR}/{LLM_NAME_O3M}"
 
 # Models LightGCN directories
-MODELS_LIGHTGCN_DIR = f"{MODELS_DIR}/LightGCN"
+MODELS_LIGHTGCN_DIR = f"{MODELS_DIR}/{MODEL_NAME_LIGHTGCN}"
 MODELS_LIGHTGCN_PREDS_DIR = f"{MODELS_LIGHTGCN_DIR}/predictions"
-MODELS_LIGHTGCN_PREDS_G25F_DIR = (
-    f"{MODELS_LIGHTGCN_PREDS_DIR}/gemini_2_5_flash"
-)
-MODELS_LIGHTGCN_PREDS_O3M_DIR = f"{MODELS_LIGHTGCN_PREDS_DIR}/openai_o3_mini"
+MODELS_LIGHTGCN_PREDS_G25F_DIR = f"{MODELS_LIGHTGCN_PREDS_DIR}/{LLM_NAME_G25F}"
+MODELS_LIGHTGCN_PREDS_O3M_DIR = f"{MODELS_LIGHTGCN_PREDS_DIR}/{LLM_NAME_O3M}"
 
 # Models BPR paths
-MODELS_BPR_PATH = f"{MODELS_BPR_DIR}/BPR.pth"
-MODELS_BPR_PREDS_G25F_SUS_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_0_25.pth"
-MODELS_BPR_PREDS_G25F_BAL_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_0_5.pth"
-MODELS_BPR_PREDS_G25F_REL_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_0_75.pth"
-MODELS_BPR_PREDS_G25F_PURE_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_1_0.pth"
-MODELS_BPR_PREDS_O3M_SUS_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_0_25.pth"
-MODELS_BPR_PREDS_O3M_BAL_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_0_5.pth"
-MODELS_BPR_PREDS_O3M_REL_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_0_75.pth"
-MODELS_BPR_PREDS_O3M_PURE_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_1_0.pth"
+MODELS_BPR_PATH = f"{MODELS_BPR_DIR}/{MODEL_NAME_BPR}.pth"
+MODELS_BPR_PREDS_G25F_SUS_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_BPR_PREDS_G25F_BAL_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_BPR_PREDS_G25F_REL_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_BPR_PREDS_G25F_PURE_PATH = f"{MODELS_BPR_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
+MODELS_BPR_PREDS_O3M_SUS_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_BPR_PREDS_O3M_BAL_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_BPR_PREDS_O3M_REL_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_BPR_PREDS_O3M_PURE_PATH = f"{MODELS_BPR_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
 
 # Models LightGCN paths
-MODELS_LIGHTGCN_PATH = f"{MODELS_LIGHTGCN_DIR}/LightGCN.pth"
-MODELS_LIGHTGCN_PREDS_G25F_SUS_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_0_25.pth"
-)
-MODELS_LIGHTGCN_PREDS_G25F_BAL_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_0_5.pth"
-)
-MODELS_LIGHTGCN_PREDS_G25F_REL_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_0_75.pth"
-)
-MODELS_LIGHTGCN_PREDS_G25F_PURE_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_1_0.pth"
-)
-MODELS_LIGHTGCN_PREDS_O3M_SUS_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_0_25.pth"
-)
-MODELS_LIGHTGCN_PREDS_O3M_BAL_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_0_5.pth"
-)
-MODELS_LIGHTGCN_PREDS_O3M_REL_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_0_75.pth"
-)
-MODELS_LIGHTGCN_PREDS_O3M_PURE_PATH = (
-    f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_1_0.pth"
-)
+MODELS_LIGHTGCN_PATH = f"{MODELS_LIGHTGCN_DIR}/{MODEL_NAME_LIGHTGCN}.pth"
+MODELS_LIGHTGCN_PREDS_G25F_SUS_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_LIGHTGCN_PREDS_G25F_BAL_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_LIGHTGCN_PREDS_G25F_REL_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_LIGHTGCN_PREDS_G25F_PURE_PATH = f"{MODELS_LIGHTGCN_PREDS_G25F_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
+MODELS_LIGHTGCN_PREDS_O3M_SUS_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_SUS).replace('.', '_')}.pth"
+MODELS_LIGHTGCN_PREDS_O3M_BAL_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_BAL).replace('.', '_')}.pth"
+MODELS_LIGHTGCN_PREDS_O3M_REL_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_REL).replace('.', '_')}.pth"
+MODELS_LIGHTGCN_PREDS_O3M_PURE_PATH = f"{MODELS_LIGHTGCN_PREDS_O3M_DIR}/alpha_{str(RERANKING_ALPHA_PURE).replace('.', '_')}.pth"
 
 # Config directory
-CONFIG_DIR = "src/config"
+CONFIG_DIR = f"{SRC_DIR}/config"
 
 # Config paths
 CONFIG_PATH = f"{CONFIG_DIR}/config.yaml"
-
-# ============================================================================
-# DATASETS AND MAPS
-# ============================================================================
-# Abbreviations:
-# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-# ELEC = Electronics
-# UR = User Reviews
-# COL = Column
-# UMAP = User Map
-# IMAP = Item Map
-# ============================================================================
-
-# Dataset names
-DATASET_NAME_ELEC = "elec"
-
-# Supported datasets
-SUPPORTED_DATASETS = [DATASET_NAME_ELEC]
-
-# Raw user reviews
-RAW_UR_USER_ID_COL = "user_id"
-RAW_UR_ASIN_COL = "asin"
-RAW_UR_PARENT_ASIN_COL = "parent_asin"
-RAW_UR_TIMESTAMP_COL = "timestamp"
-RAW_UR_RATING_COL = "rating"
-
-# Processed user reviews
-PROCESSED_UR_USER_ID_COL = "user_id:token"
-PROCESSED_UR_ITEM_ID_COL = "item_id:token"
-PROCESSED_UR_RATING_COL = "rating:float"
-
-# Maps
-MAPS_UMAP_USER_ID_COL = "user_id"
-MAPS_UMAP_USER_INDEX_COL = "user_index"
-MAPS_IMAP_ITEM_ID_COL = "item_id"
-MAPS_IMAP_ITEM_INDEX_COL = "item_index"
-MAPS_IMAP_PARENT_ASIN_COL = "parent_asin"
