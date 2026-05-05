@@ -6,66 +6,43 @@ Centralize all constant values used across the project.
 """
 
 # ============================================================================
-# RE-RANKING ALPHAS
+# ABBREVIATIONS
 # ============================================================================
-# Abbreviations:
-# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-# SUS = Sustainability-first
+# AR23 = Amazon Reviews'23
+# ASIN = Amazon Standard Identification Number
 # BAL = Balanced relevance-sustainability trade-off
-# REL = Relevance-first
-# PURE = Pure relevance, no sustainability
-# ============================================================================
-
-# Re-ranking alpha values
-RERANKING_ALPHA_SUS = 0.25
-RERANKING_ALPHA_BAL = 0.5
-RERANKING_ALPHA_REL = 0.75
-RERANKING_ALPHA_PURE = 1.0
-
-# Supported re-ranking alpha values
-SUPPORTED_RERANKING_ALPHAS = [
-    RERANKING_ALPHA_SUS,
-    RERANKING_ALPHA_BAL,
-    RERANKING_ALPHA_REL,
-    RERANKING_ALPHA_PURE,
-]
-
-# ============================================================================
-# MODELS AND LLMS
-# ============================================================================
-# Abbreviations:
-# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 # BPR = Bayesian Personalized Ranking
-# LIGHTGCN = Light Graph Convolutional Network
-# LLM = Large Language Model
+# COL = Column
+# CONFIG = Configuration
+# DEDUP = Deduplication
+# DIR = Directory
+# ELEC = Electronics
+# FULL = Full dataset
 # G25F = Gemini 2.5 Flash
+# GT = Ground Truths
+# ID = Identifier
+# IM = Item Metadata
+# IMAP = Item Map
+# LLM = Large Language Model
+# LIGHTGCN = Light Graph Convolutional Network
+# MAX = Maximum
+# MIN = Minimum
 # O3M = OpenAI O3 Mini
+# PREDS = Predictions
+# PURE = Pure relevance, no sustainability
+# REL = Relevance-first
+# SRC = Source
+# SUS = Sustainability-first
+# TEST = Test set
+# TOL = Tolerance
+# TRAIN = Training set
+# UMAP = User Map
+# UR = User Reviews
+# VALID = Validation set
 # ============================================================================
-
-# Model names
-MODEL_NAME_BPR = "BPR"
-MODEL_NAME_LIGHTGCN = "LightGCN"
-
-# Supported models
-SUPPORTED_MODELS = [MODEL_NAME_BPR, MODEL_NAME_LIGHTGCN]
-
-# LLM names
-LLM_NAME_G25F = "gemini_2_5_flash"
-LLM_NAME_O3M = "openai_o3_mini"
-
-# Supported LLMs
-SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
 
 # ============================================================================
 # DATASETS
-# ============================================================================
-# Abbreviations:
-# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-# ELEC = Electronics
-# UR = User Reviews
-# COL = Column
-# ASIN = Amazon Standard Identification Number
-# ID = Identifier
 # ============================================================================
 
 # Dataset names
@@ -90,13 +67,6 @@ DATASET_PROCESSED_UR_TIMESTAMP_COL = "timestamp:float"
 # ============================================================================
 # MAPS
 # ============================================================================
-# Abbreviations:
-# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-# UMAP = User Map
-# IMAP = Item Map
-# COL = Column
-# ASIN = Amazon Standard Identification Number
-# ============================================================================
 
 # User map columns
 MAP_UMAP_USER_ID_COL = "user_id"
@@ -108,33 +78,72 @@ MAP_IMAP_ITEM_INDEX_COL = "item_index"
 MAP_IMAP_PARENT_ASIN_COL = "parent_asin"
 
 # ============================================================================
-# DIRECTORIES AND PATHS
+# MODELS AND LLMS
 # ============================================================================
-# Abbreviations:
-# ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-# SRC = Source
-# DIR = Directory
-# AR23 = Amazon Reviews'23
-# GT = Ground Truths
-# UR = User Reviews
-# IM = Item Metadata
-# G25F = Gemini 2.5 Flash
-# O3M = OpenAI O3 Mini
-# ELEC = Electronics
-# UMAP = User Map
-# IMAP = Item Map
-# PREDS = Predictions
-# FULL = Full dataset
-# TRAIN = Training set
-# TEST = Test set
-# VALID = Validation set
-# SUS = Sustainability-first
-# BAL = Balanced relevance-sustainability trade-off
-# REL = Relevance-first
-# PURE = Pure relevance, no sustainability
-# BPR = Bayesian Personalized Ranking
-# LIGHTGCN = Light Graph Convolutional Network
-# CONFIG = Configuration
+
+# Model names
+MODEL_NAME_BPR = "BPR"
+MODEL_NAME_LIGHTGCN = "LightGCN"
+
+# Supported models
+SUPPORTED_MODELS = [MODEL_NAME_BPR, MODEL_NAME_LIGHTGCN]
+
+# LLM names
+LLM_NAME_G25F = "gemini_2_5_flash"
+LLM_NAME_O3M = "openai_o3_mini"
+
+# Supported LLMs
+SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
+
+# ============================================================================
+# RATINGS
+# ============================================================================
+
+# Rating boundaries
+RATING_MIN_VALUE = 1
+RATING_MAX_VALUE = 5
+
+# ============================================================================
+# SPLIT RATIOS
+# ============================================================================
+
+# Split boundaries and tolerance
+SPLIT_RATIO_MIN_VALUE = 0.0
+SPLIT_RATIO_MAX_VALUE = 1.0
+SPLIT_RATIO_SUM_TOL = 1e-6
+
+# ============================================================================
+# DEDUPLICATION KEEP STRATEGIES
+# ============================================================================
+
+# Deduplication configuration
+DEDUP_KEEP_STRATEGY_FIRST = "first"
+DEDUP_KEEP_STRATEGY_LAST = "last"
+DEDUP_KEEP_STRATEGIES = (
+    DEDUP_KEEP_STRATEGY_FIRST,
+    DEDUP_KEEP_STRATEGY_LAST,
+)
+
+# ============================================================================
+# RE-RANKING ALPHAS
+# ============================================================================
+
+# Re-ranking alpha values
+RERANKING_ALPHA_SUS = 0.25
+RERANKING_ALPHA_BAL = 0.5
+RERANKING_ALPHA_REL = 0.75
+RERANKING_ALPHA_PURE = 1.0
+
+# Supported re-ranking alpha values
+SUPPORTED_RERANKING_ALPHAS = [
+    RERANKING_ALPHA_SUS,
+    RERANKING_ALPHA_BAL,
+    RERANKING_ALPHA_REL,
+    RERANKING_ALPHA_PURE,
+]
+
+# ============================================================================
+# DIRECTORIES AND PATHS
 # ============================================================================
 
 # Source directory
