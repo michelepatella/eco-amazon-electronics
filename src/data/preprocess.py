@@ -16,19 +16,20 @@ from src.const import (
     DATA_PROCESSED_AR23_UR_ELEC_VALID_PATH,
     DATA_RAW_AR23_UR_ELEC_PATH,
     DATASET_NAME_ELEC,
-    MAPS_IMAP_ITEM_ID_COL,
-    MAPS_IMAP_ITEM_INDEX_COL,
-    MAPS_IMAP_PARENT_ASIN_COL,
-    MAPS_UMAP_USER_ID_COL,
-    MAPS_UMAP_USER_INDEX_COL,
-    PROCESSED_UR_ITEM_ID_COL,
-    PROCESSED_UR_RATING_COL,
-    PROCESSED_UR_USER_ID_COL,
-    RAW_UR_ASIN_COL,
-    RAW_UR_PARENT_ASIN_COL,
-    RAW_UR_RATING_COL,
-    RAW_UR_TIMESTAMP_COL,
-    RAW_UR_USER_ID_COL,
+    DATASET_PROCESSED_UR_ITEM_ID_COL,
+    DATASET_PROCESSED_UR_RATING_COL,
+    DATASET_PROCESSED_UR_TIMESTAMP_COL,
+    DATASET_PROCESSED_UR_USER_ID_COL,
+    DATASET_RAW_UR_ASIN_COL,
+    DATASET_RAW_UR_PARENT_ASIN_COL,
+    DATASET_RAW_UR_RATING_COL,
+    DATASET_RAW_UR_TIMESTAMP_COL,
+    DATASET_RAW_UR_USER_ID_COL,
+    MAP_IMAP_ITEM_ID_COL,
+    MAP_IMAP_ITEM_INDEX_COL,
+    MAP_IMAP_PARENT_ASIN_COL,
+    MAP_UMAP_USER_ID_COL,
+    MAP_UMAP_USER_INDEX_COL,
 )
 from src.utils import load_config
 
@@ -67,7 +68,7 @@ def _deduplicate_user_reviews(
             Deduplicated user reviews dataset.
     """
     return user_reviews.drop_duplicates(
-        subset=[RAW_UR_USER_ID_COL, RAW_UR_ASIN_COL],
+        subset=[DATASET_RAW_UR_USER_ID_COL, DATASET_RAW_UR_ASIN_COL],
         keep=keep,
     ).reset_index(drop=True)
 
@@ -100,7 +101,7 @@ def _build_user_item_maps(
     map_users = {
         user_id: i
         for i, user_id in enumerate(
-            sorted(user_reviews[RAW_UR_USER_ID_COL].unique()),
+            sorted(user_reviews[DATASET_RAW_UR_USER_ID_COL].unique()),
         )
     }
 
@@ -108,14 +109,14 @@ def _build_user_item_maps(
     map_items = {
         item_id: i
         for i, item_id in enumerate(
-            sorted(user_reviews[RAW_UR_ASIN_COL].unique()),
+            sorted(user_reviews[DATASET_RAW_UR_ASIN_COL].unique()),
         )
     }
 
     # Create (ASIN, Parent ASIN) map
     asin_to_parent = (
-        user_reviews.drop_duplicates(RAW_UR_ASIN_COL)
-        .set_index(RAW_UR_ASIN_COL)[RAW_UR_PARENT_ASIN_COL]
+        user_reviews.drop_duplicates(DATASET_RAW_UR_ASIN_COL)
+        .set_index(DATASET_RAW_UR_ASIN_COL)[DATASET_RAW_UR_PARENT_ASIN_COL]
         .to_dict()
     )
 
@@ -129,15 +130,15 @@ def _build_user_item_maps(
     # Save maps
     pd.DataFrame(
         list(map_users.items()),
-        columns=[MAPS_UMAP_USER_ID_COL, MAPS_UMAP_USER_INDEX_COL],
+        columns=[MAP_UMAP_USER_ID_COL, MAP_UMAP_USER_INDEX_COL],
     ).to_csv(DATA_INTERIM_MAPS_UMAP_PATH, sep="\t", index=False)
 
     pd.DataFrame(
         map_items,
         columns=[
-            MAPS_IMAP_ITEM_ID_COL,
-            MAPS_IMAP_ITEM_INDEX_COL,
-            MAPS_IMAP_PARENT_ASIN_COL,
+            MAP_IMAP_ITEM_ID_COL,
+            MAP_IMAP_ITEM_INDEX_COL,
+            MAP_IMAP_PARENT_ASIN_COL,
         ],
     ).to_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t", index=False)
 
@@ -166,6 +167,7 @@ def _binarize_user_reviews(
             - "user_id": Unique identifier for users.
             - "asin": Item identifier.
             - "rating": Numerical rating values to binarize.
+            - "timestamp": Interaction timestamp.
 
         map_users (dict):
             (User ID, User Index) map.
@@ -183,16 +185,22 @@ def _binarize_user_reviews(
     # Binarize ratings and save user-item interactions in RecBole format
     binarized_user_reviews = pd.DataFrame(
         {
-            PROCESSED_UR_USER_ID_COL: user_reviews[RAW_UR_USER_ID_COL].map(
+            DATASET_PROCESSED_UR_USER_ID_COL: user_reviews[
+                DATASET_RAW_UR_USER_ID_COL
+            ].map(
                 map_users,
             ),
-            PROCESSED_UR_ITEM_ID_COL: user_reviews[RAW_UR_ASIN_COL].map(
+            DATASET_PROCESSED_UR_ITEM_ID_COL: user_reviews[
+                DATASET_RAW_UR_ASIN_COL
+            ].map(
                 {item_id: item_index for item_id, item_index, _ in map_items},
             ),
-            PROCESSED_UR_RATING_COL: (
-                user_reviews[RAW_UR_RATING_COL] >= threshold
+            DATASET_PROCESSED_UR_RATING_COL: (
+                user_reviews[DATASET_RAW_UR_RATING_COL] >= threshold
             ).astype(int),
-            RAW_UR_TIMESTAMP_COL: user_reviews[RAW_UR_TIMESTAMP_COL].values,
+            DATASET_PROCESSED_UR_TIMESTAMP_COL: user_reviews[
+                DATASET_RAW_UR_TIMESTAMP_COL
+            ].values,
         },
     ).reset_index(drop=True)
 
@@ -255,13 +263,13 @@ def _split_user_reviews(
     # Group interactions by user and process each user's history temporally
     # to maintain chronological order within user interactions
     for _, user_interactions in user_reviews.groupby(
-        PROCESSED_UR_USER_ID_COL,
+        DATASET_PROCESSED_UR_USER_ID_COL,
         sort=True,
     ):
         # Calculate split boundaries based on number of user interactions
         # ensuring each split respects the configured ratios
         user_interactions = user_interactions.sort_values(
-            by=RAW_UR_TIMESTAMP_COL,
+            by=DATASET_PROCESSED_UR_TIMESTAMP_COL,
         )
         num_interactions = len(user_interactions)
         train_size = int(
@@ -294,9 +302,13 @@ def _split_user_reviews(
 
     # Filter validation and test to contain only items present in training set,
     # preventing cold-start problems where model evaluates on unseen items
-    train_items = set(train_df[PROCESSED_UR_ITEM_ID_COL].unique())
-    valid_df = valid_df[valid_df[PROCESSED_UR_ITEM_ID_COL].isin(train_items)]
-    test_df = test_df[test_df[PROCESSED_UR_ITEM_ID_COL].isin(train_items)]
+    train_items = set(train_df[DATASET_PROCESSED_UR_ITEM_ID_COL].unique())
+    valid_df = valid_df[
+        valid_df[DATASET_PROCESSED_UR_ITEM_ID_COL].isin(train_items)
+    ]
+    test_df = test_df[
+        test_df[DATASET_PROCESSED_UR_ITEM_ID_COL].isin(train_items)
+    ]
 
     # Save all splits in RecBole format
     train_df.to_csv(processed_user_reviews_train_path, sep="\t", index=False)
@@ -325,7 +337,7 @@ def preprocess_data() -> None:
     # to maintain temporal order of interactions for each user
     steps.set_description("Loading raw user reviews")
     user_reviews = pd.read_json(raw_user_reviews_path, lines=True).sort_values(
-        by=[RAW_UR_USER_ID_COL, RAW_UR_TIMESTAMP_COL],
+        by=[DATASET_RAW_UR_USER_ID_COL, DATASET_RAW_UR_TIMESTAMP_COL],
     )
     steps.update(1)
 
