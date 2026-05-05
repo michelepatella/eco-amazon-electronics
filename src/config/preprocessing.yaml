@@ -1,0 +1,35 @@
+preprocessing:
+  deduplication:
+    # ------------------------------------------------------------------------------------
+    # Description: Deduplication strategy for handling duplicate user-item interactions
+    # Type: str
+    # Constraints: Must be "first" or "last"
+    # ------------------------------------------------------------------------------------
+    keep: "last"
+
+  binarization:
+    rating:
+      # ------------------------------------------------------------------------------------
+      # Description: Threshold for binarizing ratings; interactions with ratings above
+      #              this threshold will be considered positive
+      # Type: int
+      # Constraints: Must be in the range [1, 5]
+      # ------------------------------------------------------------------------------------
+      threshold: 5
+
+  split:
+    # ------------------------------------------------------------------------------------
+    # Description: Ratios for splitting the dataset into train, validation, and test sets
+    # Type: float
+    # Constraints: Must be in the range [0.0, 1.0] and sum to 1.0
+    # ------------------------------------------------------------------------------------
+    train_ratio: 0.8
+    valid_ratio: 0.1
+    test_ratio: 0.1
+
+    # ------------------------------------------------------------------------------------
+    # Description: Seed for random shuffling in data splitting to ensure reproducibility
+    # Type: int
+    # Constraints: Must be >= 0
+    # ------------------------------------------------------------------------------------
+    seed: 42

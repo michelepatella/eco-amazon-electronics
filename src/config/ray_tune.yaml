@@ -1,0 +1,101 @@
+ray_tune:
+  # ------------------------------------------------------------------------------------
+  # Description: Address of the Ray cluster to connect to
+  # Type: str
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  address: "local"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Number of CPU and GPU cores to allocate for each Ray actor
+  # Type: int
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  num_cpus: 4
+  num_gpus: 2
+
+  # ------------------------------------------------------------------------------------
+  # Description: Memory limit for the Ray object store in bytes
+  # Type: int
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  object_store_memory: 8000000000
+
+  # ------------------------------------------------------------------------------------
+  # Description: Whether to ignore errors when reinitializing Ray
+  # Type: bool
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  ignore_reinit_error: false
+
+  # ------------------------------------------------------------------------------------
+  # Description: Whether to include the Ray dashboard
+  # Type: bool
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  include_dashboard: true
+
+  # ------------------------------------------------------------------------------------
+  # Description: Host for the Ray dashboard to listen on
+  # Type: str
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  dashboard_host: "127.0.0.1"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Port for the Ray dashboard to listen on
+  # Type: int
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  dashboard_port: 8265
+
+  job_config:
+    # ------------------------------------------------------------------------------------
+    # Description: Name of the Ray Tune experiment for organizing results and logs
+    # Type: str
+    # Constraints: Read Ray documentation (https://docs.ray.io/)
+    # ------------------------------------------------------------------------------------
+    name: "tuning-experiment"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Logging configuration for Ray Tune
+  # Type: bool
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  configure_logging: true
+
+  # ------------------------------------------------------------------------------------
+  # Description: Logging level for Ray Tune
+  # Type: str
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  logging_level: "INFO"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Logging format for Ray Tune
+  # Type: str
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  logging_format: "%(asctime)s %(levelname)s %(filename)s:%(lineno)s %(message)s"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Whether to log Ray Tune output to the driver process
+  # Type: bool
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  log_to_driver: false
+
+  # ------------------------------------------------------------------------------------
+  # Description: Namespace for Ray Tune to use for organizing results and logs
+  # Type: str
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  namespace: "tuning"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Directory for Ray to spill objects to disk when the object store memory
+  #              limit is exceeded
+  # Type: str
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  object_spilling_directory: "/tmp/ray_spill"
