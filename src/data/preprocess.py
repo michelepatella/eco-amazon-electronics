@@ -148,6 +148,7 @@ def _binarize_user_reviews(
     user_reviews: pd.DataFrame,
     map_users: dict,
     map_items: list[tuple],
+    threshold: int,
 ) -> pd.DataFrame:
     """Binarize ratings and save user-item interactions in RecBole format.
 
@@ -172,6 +173,9 @@ def _binarize_user_reviews(
         map_items (list[tuple]):
             List of (Item ID, Item Index, Parent ASIN) tuples.
 
+        threshold (int):
+            Rating threshold for binarization. Ratings >= threshold become 1.
+
     Returns:
         pd.DataFrame:
             The binarized user reviews dataset.
@@ -186,8 +190,7 @@ def _binarize_user_reviews(
                 {item_id: item_index for item_id, item_index, _ in map_items},
             ),
             PROCESSED_UR_RATING_COL: (
-                user_reviews[RAW_UR_RATING_COL]
-                >= config.data.preprocessing.binarization.rating.threshold
+                user_reviews[RAW_UR_RATING_COL] >= threshold
             ).astype(int),
             RAW_UR_TIMESTAMP_COL: user_reviews[RAW_UR_TIMESTAMP_COL].values,
         },
@@ -202,7 +205,12 @@ def _binarize_user_reviews(
     return binarized_user_reviews
 
 
-def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
+def _split_user_reviews(
+    user_reviews: pd.DataFrame,
+    train_ratio: float,
+    valid_ratio: float,
+    seed: int,
+) -> None:
     """Split user reviews by temporal order and shuffle training set.
 
     Performs a user-aware temporal split, ensuring that for each individual
@@ -227,6 +235,15 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
             - "rating:float": Binary rating 0 or 1
             - "timestamp:float": Interaction timestamp
 
+        train_ratio (float):
+            Proportion of data for training set.
+
+        valid_ratio (float):
+            Proportion of data for validation set.
+
+        seed (int):
+            Random seed for shuffling training set.
+
     Returns:
         None
     """
@@ -248,10 +265,10 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
         )
         num_interactions = len(user_interactions)
         train_size = int(
-            config.data.preprocessing.split.train_ratio * num_interactions,
+            train_ratio * num_interactions,
         )
         valid_size = int(
-            config.data.preprocessing.split.valid_ratio * num_interactions,
+            valid_ratio * num_interactions,
         )
 
         # Split user's temporal sequence: old -> train, recent -> valid,
@@ -271,7 +288,7 @@ def _split_user_reviews(user_reviews: pd.DataFrame) -> None:
     # Shuffle training set for robustness using configured seed for full
     # reproducibility. Valid and test sets preserve temporal order to ensure
     # realistic evaluation (model predicts future, not random past)
-    train_df = train_df.sample(frac=1.0, random_state=config.seed).reset_index(
+    train_df = train_df.sample(frac=1.0, random_state=seed).reset_index(
         drop=True,
     )
 
@@ -332,13 +349,19 @@ def preprocess_data() -> None:
         user_reviews,
         map_users,
         map_items,
+        threshold=config.data.preprocessing.binarization.rating.threshold,
     )
     steps.update(1)
 
     # Split binarized interactions into train/valid/test sets and persist
     # each split separately for downstream model training and evaluation
     steps.set_description("Splitting user reviews into train/valid/test")
-    _split_user_reviews(binarized_user_reviews)
+    _split_user_reviews(
+        binarized_user_reviews,
+        train_ratio=config.data.preprocessing.split.train_ratio,
+        valid_ratio=config.data.preprocessing.split.valid_ratio,
+        seed=config.seed,
+    )
     steps.update(1)
     steps.set_description("Data preprocessing completed")
     steps.close()
