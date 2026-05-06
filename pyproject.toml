@@ -14,6 +14,7 @@ dependencies = [
     "python-box==7.4.1",
     "python-dotenv==1.2.1",
     "ray==2.55.1",
+    "ray[tune]==2.55.1",
     "recbole==1.2.0",
     "torch==2.11.0",
     "tqdm==4.67.3"
