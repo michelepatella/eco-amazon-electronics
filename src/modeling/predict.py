@@ -4,12 +4,102 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 import torch
+from recbole.data.dataloader import AbstractDataLoader
+from recbole.data.dataset import Dataset
+from recbole.model.abstract_recommender import AbstractRecommender
 from recbole.quick_start import load_data_and_model
 from recbole.utils.case_study import full_sort_topk
 from tqdm import tqdm
 
-from const import SUPPORTED_LLMS, SUPPORTED_RERANKING_ALPHAS
-from src.utils import get_co2e_kg_estimations, get_latest_checkpoint
+from const import (
+    DATA_INTERIM_MAPS_IMAP_PATH,
+    DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
+    DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
+    DATASET_NAME_ELEC,
+    LLM_NAME_G25F,
+    LLM_NAME_O3M,
+    MODEL_NAME_BPR,
+    MODEL_NAME_LIGHTGCN,
+    MODELS_ELEC_BPR_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_BAL_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_PURE_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_REL_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_SUS_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_BAL_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_PURE_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_REL_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_SUS_PATH,
+    MODELS_ELEC_LIGHTGCN_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_BAL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_PURE_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_REL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_SUS_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_BAL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_PURE_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_REL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_SUS_PATH,
+    RERANKING_ALPHA_BAL,
+    RERANKING_ALPHA_PURE,
+    RERANKING_ALPHA_REL,
+    RERANKING_ALPHA_SUS,
+    SUPPORTED_DATASETS,
+    SUPPORTED_LLMS,
+    SUPPORTED_MODELS,
+    SUPPORTED_RERANKING_ALPHAS,
+)
+from src.utils import load_config, load_jsonl
+
+# Load configuration
+config = load_config()
+
+# Determine paths based on dataset name
+assert config["dataset"]["name"] in SUPPORTED_DATASETS, (
+    f"Supported dataset: {SUPPORTED_DATASETS}, got: {config['dataset']['name']}"
+)
+if config["dataset"]["name"] == DATASET_NAME_ELEC:
+    # Map models to their registry information
+    model_registry = {
+        MODEL_NAME_BPR: {
+            "model_path": MODELS_ELEC_BPR_PATH,
+            "preds_paths": {
+                LLM_NAME_G25F: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_BPR_PREDS_G25F_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_BPR_PREDS_G25F_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_BPR_PREDS_G25F_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_BPR_PREDS_G25F_PURE_PATH,
+                },
+                LLM_NAME_O3M: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_BPR_PREDS_O3M_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_BPR_PREDS_O3M_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_BPR_PREDS_O3M_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_BPR_PREDS_O3M_PURE_PATH,
+                },
+            },
+        },
+        MODEL_NAME_LIGHTGCN: {
+            "model_path": MODELS_ELEC_LIGHTGCN_PATH,
+            "preds_paths": {
+                LLM_NAME_G25F: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_LIGHTGCN_PREDS_G25F_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_LIGHTGCN_PREDS_G25F_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_LIGHTGCN_PREDS_G25F_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_LIGHTGCN_PREDS_G25F_PURE_PATH,
+                },
+                LLM_NAME_O3M: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_LIGHTGCN_PREDS_O3M_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_LIGHTGCN_PREDS_O3M_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_LIGHTGCN_PREDS_O3M_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_LIGHTGCN_PREDS_O3M_PURE_PATH,
+                },
+            },
+        },
+    }
+
+    # Map models to their enriched item metadata paths
+    emission_data_paths = {
+        LLM_NAME_G25F: DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
+        LLM_NAME_O3M: DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
+    }
 
 
 def pcf_aware_reranker(
@@ -52,201 +142,281 @@ def pcf_aware_reranker(
         else np.array(item_list_internal)
     )
 
-    return items_np[sorted_indices].copy(), sas_scores[sorted_indices].copy()
+    return items_np[sorted_indices].copy()
 
 
-def get_top_k_recommendations(model, k, config):
-    """Retrieves top-k recommendations for all the users, given a trained model."""
-    # Setup
-    batch_size = 1000
-    all_scores = []
-    all_iids = []
+def _compute_top_k_recommendations(
+    model: AbstractRecommender,
+    dataset: Dataset,
+    test_data: AbstractDataLoader,
+    top_k: int,
+    chunk_size: int,
+    device: str,
+) -> tuple[torch.Tensor, torch.Tensor, np.ndarray]:
+    """Computes top-k item recommendations for all users in the test set
+    using a trained RecBole model.
 
-    # Get the internal RecBole user IDs
-    test_user_internal_ids = np.unique(
+    This function performs full-sort inference over all users contained in
+    the test set. To ensure scalability and memory efficiency, users are
+    processed in fixed-size chunks. For each chunk, the function computes the
+    top-k item scores and corresponding item indices, and aggregates the results
+    across all chunks.
+
+    Args:
+        model (AbstractRecommender):
+            Trained RecBole recommendation model used for inference.
+
+        dataset (Dataset):
+            RecBole dataset object used to access metadata.
+
+        test_data (AbstractDataLoader):
+            RecBole dataloader containing the test interaction data.
+
+        top_k (int):
+            Number of top-ranked items to retrieve per user.
+
+        chunk_size (int):
+            Number of users processed per iteration to control memory usage.
+
+        device (str):
+            Computation device used for inference.
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor, np.ndarray]:
+            - scores: Tensor of shape [num_users, top_k] containing predicted relevance scores
+            - item_ids: Tensor of shape [num_users, top_k] containing recommended item indices
+            - user_ids: Numpy array containing the internal user IDs
+    """
+    # Get all the internal RecBole user IDs from the test set
+    user_ids = np.unique(
         test_data.dataset.inter_feat[dataset.uid_field].numpy(),
     )
-    total_users = len(test_user_internal_ids)
-    num_batches = math.ceil(total_users / batch_size)
 
-    # Get top-k recommendations for all the users
+    # Process users in chunks to manage memory usage
+    tot_users = len(user_ids)
+    scores = []
+    item_ids = []
     for i in tqdm(
-        range(num_batches),
-        desc=f"Retrieving top-{k} recommendations for {total_users} users...",
+        range(math.ceil(tot_users / chunk_size)),
+        desc=f"Computing top-{top_k} recommendations for {tot_users} users",
     ):
-        # Calculate the current batch boundaries
-        start_idx = i * batch_size
-        end_idx = min((i + 1) * batch_size, total_users)
+        # Calculate start and end indices for the current chunk
+        start_idx = i * chunk_size
+        end_idx = min((i + 1) * chunk_size, tot_users)
 
-        # Retrieve user IDs
-        batch_users = test_user_internal_ids[start_idx:end_idx]
-        uid_tensor = torch.tensor(batch_users)
+        # Get the internal user IDs for the current chunk
+        chunk_user_ids = torch.tensor(user_ids[start_idx:end_idx])
 
-        # Get recommendations for all the items
-        # and users in the current batch,
-        # returning top-k predictions
-        batch_scores, batch_iids = full_sort_topk(
-            uid_tensor,
+        # Compute top-k scores and item IDs for the current chunk of users
+        chunk_scores, chunk_item_ids = full_sort_topk(
+            chunk_user_ids,
             model,
             test_data,
-            k=k,
-            device=config["device"],
+            k=top_k,
+            device=device,
         )
-        all_scores.append(batch_scores.cpu())
-        all_iids.append(batch_iids.cpu())
+        scores.append(chunk_scores.cpu())
+        item_ids.append(chunk_item_ids.cpu())
 
-    final_scores = torch.cat(all_scores, dim=0)
-    final_iids = torch.cat(all_iids, dim=0)
+    # Concatenate results from all chunks
+    scores = torch.cat(scores, dim=0)
+    item_ids = torch.cat(item_ids, dim=0)
 
-    return final_scores, final_iids
+    return scores, item_ids, user_ids
 
 
-def get_reranked_top_k_recommendations(
-    final_scores,
-    final_iids,
-    id_to_asin,
-    co2e_scores,
-    alpha,
-    k,
+def _rerank_top_k_recommendations(
+    scores: torch.Tensor,
+    item_ids: torch.Tensor,
+    user_ids: np.ndarray,
+    dataset: Dataset,
+    test_data: AbstractDataLoader,
+    item_map: dict,
+    emission_data: dict,
+    alpha: float,
+    top_k: int,
 ):
-    # Get user and item IDs external to RecBole,
-    # which match with the original dataset info
-    ground_truth_map = defaultdict(set)
-    uids = test_data.dataset.inter_feat[dataset.uid_field].numpy()
-    iids = test_data.dataset.inter_feat[dataset.iid_field].numpy()
-    for u, i in zip(uids, iids):
-        ground_truth_map[u].add(i)
+    """Re-ranks top-K item recommendations using a sustainability-aware scoring function
+    and computes evaluation signals against ground truth interactions.
 
-    # Perform the re-ranking with the PCF-aware item data
-    pos_matrix_list = []
-    pos_len_list = []
-    reranked_items_all_users = []
-    test_user_internal_ids = np.unique(
-        test_data.dataset.inter_feat[dataset.uid_field].numpy(),
-    )
-    for idx, internal_uid in enumerate(
+    This function takes pre-computed model scores and item rankings, applies a
+    secondary ranking step based on a sustainability-aware objective, and
+    evaluates the resulting ranked lists against the ground truth interactions
+    in the test set. Specifically, for each user:
+    1. Retrieves the top-K recommended items from the base recommender
+    2. Applies sustainability-aware reranking using emission-aware item scores
+    3. Truncates the reranked list to the final top-K items
+    4. Computes binary relevance indicators (hit vector) against ground truth
+    5. Stores the total number of relevant items per user
+
+    Args:
+        scores (torch.Tensor):
+            Tensor of shape [num_users, top_k] containing predicted relevance
+            scores from the base recommender.
+
+        item_ids (torch.Tensor):
+            Tensor of shape [num_users, top_k] containing item indices
+            predicted by the base recommender.
+
+        user_ids (np.ndarray):
+            Numpy array containing the internal user IDs.
+
+        dataset (Dataset):
+            RecBole dataset object.
+
+        test_data (AbstractDataLoader):
+            Test dataloader containing user-item interaction data.
+
+        item_map (dict):
+            Mapping from internal item indices to external identifiers (ASIN).
+
+        emission_data (dict):
+            Mapping from item identifiers to emission values.
+
+        alpha (float):
+            Weighting factor controlling the trade-off between recommendation
+            relevance and emission-aware scoring.
+
+        top_k (int):
+            Number of items to keep in the final reranked recommendation list.
+
+    Returns:
+        tuple:
+            - pos_matrix (list[list[int]]):
+                Binary relevance matrix indicating whether each reranked item
+                is present in the ground truth for each user.
+
+            - pos_len (list[int]):
+                Number of relevant (ground-truth) items per user.
+
+            - reranked_item_ids (list[list[int]]):
+                Final reranked top-K item lists per user.
+    """
+    # Get all the internal RecBole user and item IDs from the test set
+    gt_user_ids = test_data.dataset.inter_feat[dataset.uid_field].numpy()
+    gt_item_ids = test_data.dataset.inter_feat[dataset.iid_field].numpy()
+
+    # Build ground truth map (internal user ID -> set of interacted items)
+    gt_map = defaultdict(set)
+    for u, i in zip(gt_user_ids, gt_item_ids):
+        gt_map[u].add(i)
+
+    # Re-rank recommendations for each user
+    tot_users = len(user_ids)
+    pos_matrix = []
+    pos_len = []
+    reranked_item_ids = []
+    for idx, user_id in enumerate(
         tqdm(
-            test_user_internal_ids,
-            desc=f"Re-ranking top-{k} recommendations...",
+            user_ids,
+            desc=f"Re-ranking top-{top_k} recommendations for {tot_users} users",
         ),
     ):
-        # Get both internal items and scores
-        internal_items = final_iids[idx]
-        item_scores = final_scores[idx].tolist()
-
-        # Re-rank the recommendations taking care about PCF
-        reranked_items, _ = pcf_aware_reranker(
-            co2e_scores=co2e_scores,
-            item_list_internal=internal_items,
-            score_list=item_scores,
+        # Re-rank the top-k recommendations for the current user
+        user_reranked_item_ids = pcf_aware_reranker(
+            co2e_scores=emission_data,
+            item_list_internal=item_ids[idx],
+            score_list=scores[idx].tolist(),
             dataset=dataset,
-            id_to_asin=id_to_asin,
+            id_to_asin=item_map,
             alpha=alpha,
         )
 
-        # Retrieve ground truth
-        user_gt = ground_truth_map[internal_uid]
+        # Keep track of the top-k re-ranked items for the current user
+        reranked_item_ids.append(user_reranked_item_ids[:top_k])
 
-        # Save re-ranked items
-        reranked_items_all_users.append(reranked_items[:k])
-
-        # For each item, check whether it appears in the ground truth:
-        # 0 -> It doesn't appear
-        # 1 -> It appears
+        # Get the ground truth interacted items for the current user
+        # to compute the position of relevant items in the re-ranked list
+        user_gt = gt_map[user_id]
         hits = [
-            1 if int(item) in user_gt else 0 for item in reranked_items[:k]
+            1 if int(item) in user_gt else 0
+            for item in user_reranked_item_ids[:top_k]
         ]
 
-        # Update matrices for evaluation
-        pos_matrix_list.append(hits)
-        pos_len_list.append(len(user_gt))
+        # Keep track of the binary relevance indicators for items in the reranked
+        # list and total number of relevant items per user
+        pos_matrix.append(hits)
+        pos_len.append(len(user_gt))
 
-    return pos_matrix_list, pos_len_list, reranked_items_all_users
+    return pos_matrix, pos_len, reranked_item_ids
 
 
 def infer_recsys() -> None:
-    k = 100
+    # Load models and dataset
+    models_bundle = {}
+    for model in SUPPORTED_MODELS:
+        models_bundle[model] = load_data_and_model(
+            model_file=model_registry[model]["model_path"],
+        )
 
-    # Load the latest, best BPR and LightGCN trained models
-    bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
-        model_file=get_latest_checkpoint("BPR_best"),
-    )
-    light_gcn_config, light_gcn_model, *_ = load_data_and_model(
-        model_file=get_latest_checkpoint("LightGCN_best"),
-    )
-
-    # Load CO2 score estimations
-    for llm in SUPPORTED_LLMS:
-        co2e_scores = get_co2e_kg_estimations(model_tag)
+    # Load emission data
+    emission_data = {
+        llm: {
+            d["parent_asin"]: d["co2e_kg"]
+            for d in load_jsonl(emission_data_paths[llm])
+            if d.get("co2e_kg") is not None
+        }
+        for llm in SUPPORTED_LLMS
+    }
 
     # Load item_index -> parent_asin mapping
-    item_map_df = pd.read_csv(
-        "../2_recbole/process_data/maps/item_map.tsv",
-        sep="\t",
-    )
-    id_to_asin = dict(
-        zip(item_map_df["item_index"], item_map_df["parent_asin"]),
-    )
-
-    # =============================================
-    # Standard recommendations
-    # =============================================
-    # Retrieve the standard recommendations using both trained models
-    final_scores_bpr, final_iids_bpr = get_top_k_recommendations(
-        model=bpr_model,
-        k=k,
-        config=bpr_config,
-    )
-    final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
-        model=light_gcn_model,
-        k=k,
-        config=light_gcn_config,
+    item_map_df = pd.read_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t")
+    item_map = dict(
+        zip(
+            item_map_df["item_index"],
+            item_map_df["parent_asin"],
+        ),
     )
 
-    # =============================================
-    # PCF-aware recommendations
-    # =============================================
-    for alpha in SUPPORTED_RERANKING_ALPHAS:
-        pos_matrix_bpr, pos_len_bpr, items_bpr = (
-            get_reranked_top_k_recommendations(
-                final_scores=final_scores_bpr,
-                final_iids=final_iids_bpr,
-                id_to_asin=id_to_asin,
-                co2e_scores=co2e_scores,
-                alpha=alpha,
-                k=k,
-            )
+    # Compute top-k recommendations
+    recommendations = {}
+    for model in SUPPORTED_MODELS:
+        scores, item_ids, user_ids = _compute_top_k_recommendations(
+            model=models_bundle[model][1],
+            dataset=models_bundle[model][2],
+            test_data=models_bundle[model][5],
+            top_k=config["inference"]["top_k"],
+            chunk_size=config["inference"]["chunk_size"],
+            device=models_bundle[model][0]["device"],
         )
-        results_bpr = {
-            "pos_matrix": pos_matrix_bpr,
-            "pos_len": pos_len_bpr,
-            "reranked_items": items_bpr,
-            "model": "BPR",
-            "alpha": alpha,
+        recommendations[model] = {
+            "scores": scores,
+            "item_ids": item_ids,
+            "user_ids": user_ids,
         }
-        torch.save(
-            results_bpr,
-            f"results/BPR/{model_tag}/results_alpha_{alpha}.pth",
-        )
 
-        pos_matrix_lgcn, pos_len_lgcn, items_lgcn = (
-            get_reranked_top_k_recommendations(
-                final_scores=final_scores_light_gcn,
-                final_iids=final_iids_light_gcn,
-                id_to_asin=id_to_asin,
-                co2e_scores=co2e_scores,
-                alpha=alpha,
-                k=k,
-            )
-        )
-        results_lgcn = {
-            "pos_matrix": pos_matrix_lgcn,
-            "pos_len": pos_len_lgcn,
-            "reranked_items": items_lgcn,
-            "model": "LightGCN",
-            "alpha": alpha,
-        }
-        torch.save(
-            results_lgcn,
-            f"results/LightGCN/{model_tag}/results_alpha_{alpha}.pth",
-        )
+    # Re-rank recommendations varying the alpha parameter
+    for llm in SUPPORTED_LLMS:
+        for model in SUPPORTED_MODELS:
+            # Get the pre-computed scores and item IDs for the current model
+            scores = recommendations[model]["scores"]
+            item_ids = recommendations[model]["item_ids"]
+            user_ids = recommendations[model]["user_ids"]
+            for alpha in SUPPORTED_RERANKING_ALPHAS:
+                # Re-rank the top-k recommendations and compute evaluation signals
+                pos_matrix, pos_len, reranked_item_ids = (
+                    _rerank_top_k_recommendations(
+                        scores=scores,
+                        item_ids=item_ids,
+                        user_ids=user_ids,
+                        dataset=models_bundle[model][2],
+                        test_data=models_bundle[model][5],
+                        item_map=item_map,
+                        emission_data=emission_data[llm],
+                        alpha=alpha,
+                        top_k=config["inference"]["top_k"],
+                    )
+                )
+
+                # Save the results for the current model and alpha
+                results = {
+                    "pos_matrix": pos_matrix,
+                    "pos_len": pos_len,
+                    "reranked_item_ids": reranked_item_ids,
+                    "model": model,
+                    "alpha": alpha,
+                }
+                torch.save(
+                    results,
+                    model_registry[model]["preds_paths"][llm][alpha],
+                )
