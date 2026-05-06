@@ -5,8 +5,6 @@ Project constants.
 Centralize all constant values used across the project.
 """
 
-from box import Box
-
 # ============================================================================
 # DATASETS
 # ============================================================================
@@ -82,12 +80,10 @@ SUPPORTED_RERANKING_ALPHAS = [
 # ============================================================================
 # TUNING
 # ============================================================================
-TUNING_OPT_METRIC = Box(
-    {
-        "name": "best_valid_score",
-        "mode": "max",
-    },
-)
+TUNING_OPT_METRIC = {
+    "name": "best_valid_score",
+    "mode": "max",
+}
 
 # ============================================================================
 # DIRECTORIES AND PATHS
