@@ -234,7 +234,6 @@ def train_recsys() -> None:
         checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
 
         # Retrain the model with its best hyperparameters found
-
         _trainable(
             config=best_config,
             base_config=config["recbole"],
