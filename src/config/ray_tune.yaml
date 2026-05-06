@@ -91,3 +91,10 @@ ray_tune:
   # Constraints: Read Ray documentation (https://docs.ray.io/)
   # ------------------------------------------------------------------------------------
   namespace: "tuning"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Number of random search steps for Ray Tune
+  # Type: int
+  # Constraints: Read Ray documentation (https://docs.ray.io/)
+  # ------------------------------------------------------------------------------------
+  random_search_steps: 10

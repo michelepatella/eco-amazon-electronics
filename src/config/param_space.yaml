@@ -1,4 +1,4 @@
-tuning_space:
+param_space:
   # ------------------------------------------------------------------------------------
   # Description: Batch size used during training, affecting convergence speed and
   #              generalization
