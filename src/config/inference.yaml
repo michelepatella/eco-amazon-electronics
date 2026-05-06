@@ -1,0 +1,15 @@
+inference:
+
+  # -------------------------------------------------------------------------------------
+  # Description: Number of top recommendations to compute for each user
+  # Type: int
+  # Constraints: > 0
+  # -------------------------------------------------------------------------------------
+  top_k: 100
+
+  # -------------------------------------------------------------------------------------
+  # Description: Number of user rows to process in each chunk during inference
+  # Type: int
+  # Constraints: > 0
+  # -------------------------------------------------------------------------------------
+  chunk_size: 1000
