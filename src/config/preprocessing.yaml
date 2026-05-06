@@ -1,34 +1,30 @@
 preprocessing:
-  deduplication:
-    # ------------------------------------------------------------------------------------
-    # Description: Deduplication strategy for handling duplicate user-item interactions
-    # Type: str
-    # Constraints: "first", "last"
-    # ------------------------------------------------------------------------------------
-    keep: "last"
+  # ------------------------------------------------------------------------------------
+  # Description: Deduplication strategy for handling duplicate user-item interactions
+  # Type: str
+  # Constraints: "first", "last"
+  # ------------------------------------------------------------------------------------
+  deduplication_keep: "last"
 
-  binarization:
-    rating:
-      # ------------------------------------------------------------------------------------
-      # Description: Threshold for binarizing ratings
-      # Type: int
-      # Constraints: 1-5
-      # ------------------------------------------------------------------------------------
-      threshold: 5
+  # ------------------------------------------------------------------------------------
+  # Description: Threshold for binarizing ratings
+  # Type: int
+  # Constraints: 1-5
+  # ------------------------------------------------------------------------------------
+  bin_rating_threshold: 5
 
-  split:
-    # ------------------------------------------------------------------------------------
-    # Description: Ratios for splitting the dataset into train, validation, and test sets
-    # Type: float
-    # Constraints: 0.0-1.0 and sum to 1.0
-    # ------------------------------------------------------------------------------------
-    train_ratio: 0.8
-    valid_ratio: 0.1
-    test_ratio: 0.1
+  # ------------------------------------------------------------------------------------
+  # Description: Ratios for splitting the dataset into train, validation, and test sets
+  # Type: float
+  # Constraints: 0.0-1.0 and sum to 1.0
+  # ------------------------------------------------------------------------------------
+  train_ratio: 0.8
+  valid_ratio: 0.1
+  test_ratio: 0.1
 
-    # ------------------------------------------------------------------------------------
-    # Description: Seed for random shuffling in data splitting to ensure reproducibility
-    # Type: int
-    # Constraints: >= 0
-    # ------------------------------------------------------------------------------------
-    seed: 42
+  # ------------------------------------------------------------------------------------
+  # Description: Seed for random shuffling in data splitting to ensure reproducibility
+  # Type: int
+  # Constraints: >= 0
+  # ------------------------------------------------------------------------------------
+  seed: 42
