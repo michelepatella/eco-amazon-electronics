@@ -5,6 +5,7 @@ Train RecBole models with hyperparameter tuning.
 
 import hashlib
 import os
+import shutil
 
 import ray
 from ray import tune
@@ -18,7 +19,9 @@ from src.const import (
     MODEL_NAME_BPR,
     MODEL_SUPPORTED_PARAMS,
     MODELS_ELEC_BPR_DIR,
+    MODELS_ELEC_BPR_PREDS_DIR,
     MODELS_ELEC_LIGHTGCN_DIR,
+    MODELS_ELEC_LIGHTGCN_PREDS_DIR,
     SUPPORTED_DATASETS,
     SUPPORTED_MODELS,
     TUNING_VAL_METRIC,
@@ -36,6 +39,12 @@ if config["dataset"]["name"] == DATASET_NAME_ELEC:
     data_path = os.path.abspath(DATA_PROCESSED_AR23_UR_DIR)
     bpr_dir = os.path.abspath(MODELS_ELEC_BPR_DIR)
     lightgcn_dir = os.path.abspath(MODELS_ELEC_LIGHTGCN_DIR)
+    bpr_checkpoint_root_dir = os.path.abspath(MODELS_ELEC_BPR_DIR)
+    lightgcn_checkpoint_root_dir = os.path.abspath(MODELS_ELEC_LIGHTGCN_DIR)
+    keep_dirs = {
+        os.path.abspath(MODELS_ELEC_LIGHTGCN_PREDS_DIR),
+        os.path.abspath(MODELS_ELEC_BPR_PREDS_DIR),
+    }
 
 
 def _trainable(
@@ -200,6 +209,18 @@ def train_recsys() -> None:
 
     # Shutdown Ray after tuning is complete
     ray.shutdown()
+
+    # Clean up any temporary checkpoint directories created during tuning
+    for checkpoint_root in [
+        bpr_checkpoint_root_dir,
+        lightgcn_checkpoint_root_dir,
+    ]:
+        for name in os.listdir(checkpoint_root):
+            path = os.path.join(checkpoint_root, name)
+            if path in keep_dirs:
+                continue
+            if os.path.isdir(path):
+                shutil.rmtree(path)
 
     # Final training for each model with the best hyperparameters found
     for model in SUPPORTED_MODELS:
