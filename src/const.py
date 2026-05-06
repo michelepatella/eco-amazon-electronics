@@ -59,6 +59,24 @@ LLM_NAME_O3M = "openai_o3_mini"
 # Supported LLMs
 SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
 
+# Supported model hyperparameters
+MODEL_SUPPORTED_PARAMS = {
+    "BPR": {
+        "embedding_size",
+        "learning_rate",
+        "weight_decay",
+        "train_batch_size",
+    },
+    "LightGCN": {
+        "embedding_size",
+        "n_layers",
+        "reg_weight",
+        "learning_rate",
+        "weight_decay",
+        "train_batch_size",
+    },
+}
+
 # ============================================================================
 # RE-RANKING ALPHAS
 # ============================================================================
