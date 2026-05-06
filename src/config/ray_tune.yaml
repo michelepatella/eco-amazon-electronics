@@ -15,13 +15,6 @@ ray_tune:
   num_gpus: 2
 
   # ------------------------------------------------------------------------------------
-  # Description: Memory limit for the Ray object store in bytes
-  # Type: int
-  # Constraints: Read Ray documentation (https://docs.ray.io/)
-  # ------------------------------------------------------------------------------------
-  object_store_memory: 8000000000
-
-  # ------------------------------------------------------------------------------------
   # Description: Whether to ignore errors when reinitializing Ray
   # Type: bool
   # Constraints: Read Ray documentation (https://docs.ray.io/)
@@ -48,14 +41,6 @@ ray_tune:
   # Constraints: Read Ray documentation (https://docs.ray.io/)
   # ------------------------------------------------------------------------------------
   dashboard_port: 8265
-
-  job_config:
-    # ------------------------------------------------------------------------------------
-    # Description: Name of the Ray Tune experiment for organizing results and logs
-    # Type: str
-    # Constraints: Read Ray documentation (https://docs.ray.io/)
-    # ------------------------------------------------------------------------------------
-    name: "tuning-experiment"
 
   # ------------------------------------------------------------------------------------
   # Description: Logging configuration for Ray Tune
@@ -86,15 +71,8 @@ ray_tune:
   log_to_driver: false
 
   # ------------------------------------------------------------------------------------
-  # Description: Namespace for Ray Tune to use for organizing results and logs
-  # Type: str
-  # Constraints: Read Ray documentation (https://docs.ray.io/)
-  # ------------------------------------------------------------------------------------
-  namespace: "tuning"
-
-  # ------------------------------------------------------------------------------------
-  # Description: Number of random search steps for Ray Tune
+  # Description: Random state for reproducible results
   # Type: int
   # Constraints: Read Ray documentation (https://docs.ray.io/)
   # ------------------------------------------------------------------------------------
-  random_search_steps: 10
+  random_state: 42
