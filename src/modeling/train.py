@@ -1,114 +1,217 @@
+import hashlib
 import os
 
 import ray
-import torch
 from ray import tune
+from ray.tune.schedulers import ASHAScheduler
+from ray.tune.search.basic_variant import BasicVariantGenerator
 from recbole.quick_start import run_recbole
 
+from src.const import (
+    DATA_PROCESSED_AR23_UR_DIR,
+    DATASET_NAME_ELEC,
+    MODEL_NAME_BPR,
+    MODEL_SUPPORTED_PARAMS,
+    MODELS_ELEC_BPR_DIR,
+    MODELS_ELEC_LIGHTGCN_DIR,
+    SUPPORTED_DATASETS,
+    SUPPORTED_MODELS,
+    TUNING_VAL_METRIC,
+)
+from src.utils import load_config
 
-def train_recbole(config, model_name, dataset_name, exp_name):
-    """Train a given model on a specific dataset with Ray."""
-    # Setup
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    dataset_path = os.path.join(base_path, "dataset")
-    config_str = f"lr_{config['lr']:.4f}_emb_{config['embedding_size']}_reg_{config['reg_weight']:.5f}"
-    unique_checkpoint_dir = os.path.join(
-        base_path, "models", exp_name, config_str,
-    )
+# Load configuration
+config = load_config()
 
-    # Run training
-    result = run_recbole(
-        model=model_name,
-        dataset=dataset_name,
-        config_dict={
-            "tensorboard": False,
-            "device": device,
-            "epochs": config["epochs"],
-            "eval_step": 10,
-            "learning_rate": config["lr"],
-            "embedding_size": config["embedding_size"],
-            "reg_weight": config["reg_weight"],
-            **(
-                {"n_layers": config["n_layers"]}
-                if model_name == "LightGCN"
-                else {}
-            ),
-            "benchmark_filename": ["train", "valid", "test"],
-            "data_path": dataset_path,
-            "checkpoint_dir": unique_checkpoint_dir,
-        },
-    )
-
-    # RecBole returns best valid score dict
-    valid_recall = result["best_valid_score"]
-    tune.report({"recall_10": valid_recall})
+# Determine paths based on dataset name
+assert config["dataset"]["name"] in SUPPORTED_DATASETS, (
+    f"Supported dataset: {SUPPORTED_DATASETS}, got: {config['dataset']['name']}"
+)
+if config["dataset"]["name"] == DATASET_NAME_ELEC:
+    data_path = os.path.abspath(DATA_PROCESSED_AR23_UR_DIR)
+    bpr_dir = os.path.abspath(MODELS_ELEC_BPR_DIR)
+    lightgcn_dir = os.path.abspath(MODELS_ELEC_LIGHTGCN_DIR)
 
 
-def run_hpo(model_name, num_samples):
-    """Run HPO for a specific model."""
-    # Common hyperparameters
-    search_space = {
-        "lr": tune.loguniform(1e-4, 5e-3),
-        "embedding_size": tune.choice([32, 64]),
-        "reg_weight": tune.loguniform(1e-5, 1e-4),
-        "epochs": 100,
+def _trainable(
+    config: dict,
+    base_config: dict,
+    dataset: str,
+    model: str,
+    data_path: str,
+    checkpoint_dir: str,
+    enable_tune: bool,
+) -> None:
+    """Train a RecBole model with optional hyperparameter tuning via Ray Tune.
+
+    This function serves as the training entry point. It:
+    1. Filters the sampled hyperparameters to retain only those supported by
+       the target model
+    2. Merges the filtered hyperparameters with the base RecBole configuration
+    3. Creates a unique checkpoint directory per trial to avoid conflicts
+    4. Trains the model using RecBole
+    5. Reports the validation metric back to Ray Tune (if enabled)
+
+    Args:
+        config (dict):
+            Hyperparameters sampled by Ray Tune for the current trial.
+
+        base_config (dict):
+            Base RecBole configuration shared across all trials.
+
+        dataset (str):
+            Name of the dataset to train on.
+
+        model (str):
+            Name of the RecBole model to train.
+
+        data_path (str):
+            Absolute path to the processed dataset directory.
+
+        checkpoint_dir (str):
+            Base directory where model checkpoints will be stored.
+
+        enable_tune (bool):
+            Whether the function is executed within a Ray Tune context.
+            If True, reports metrics to Ray Tune and creates isolated
+            checkpoint directories per trial.
+
+    Returns:
+        None
+    """
+    # Filter hyperparameters based on model's supported parameters
+    supported_params = MODEL_SUPPORTED_PARAMS.get(model, set())
+    filtered_config = {
+        k: v for k, v in config.items() if k in supported_params
     }
 
-    # Light GCN-specific hyperparameters
-    if model_name == "LightGCN":
-        search_space["n_layers"] = tune.choice([1, 2, 3])
+    # Merge base RecBole config with trial-specific hyperparameters from Ray Tune
+    final_config = {**base_config, **filtered_config}
 
-    # Run HPO
-    analysis = tune.run(
-        tune.with_parameters(
-            train_recbole,
-            model_name=model_name,
-            dataset_name="amazon_elec",
-        ),
-        metric="recall_10",
-        mode="max",
-        config=search_space,
-        num_samples=num_samples,
-        resources_per_trial={"cpu": 4},
+    # Create unique checkpoint directory for this trial to avoid conflicts
+    # when different trials have different hyperparameters
+    if enable_tune:
+        # Create a hash from the trial's hyperparameters to ensure uniqueness
+        config_str = str(sorted(filtered_config.items()))
+        trial_hash = hashlib.md5(config_str.encode()).hexdigest()[:8]
+        unique_checkpoint_dir = os.path.join(checkpoint_dir, trial_hash)
+        os.makedirs(unique_checkpoint_dir, exist_ok=True)
+    else:
+        unique_checkpoint_dir = checkpoint_dir
+
+    # Add data path and checkpoint directory to the config
+    final_config["data_path"] = data_path
+    final_config["checkpoint_dir"] = unique_checkpoint_dir
+
+    # Train the model
+    result = run_recbole(
+        dataset=dataset,
+        model=model,
+        config_dict=final_config,
     )
 
-    # Get and return the best hyperparameters found
-    best_config = analysis.get_best_config(metric="recall_10", mode="max")
-    return best_config
+    # Keep track of the best validation score
+    if enable_tune:
+        tune.report({TUNING_VAL_METRIC["name"]: result["best_valid_score"]})
 
 
-# =============================================
-# Setup
-# =============================================
-# Configure device and initialize Ray
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-ray.init(
-    include_dashboard=True, dashboard_host="127.0.0.1", dashboard_port=8265,
-)
+def train_recsys() -> None:
+    """Run hyperparameter tuning and final training for supported RecBole models.
 
-# =============================================
-# HPO both for BPR and Light GCN
-# =============================================
-# Run HPO both for BPR and Light GCN
-best_bpr = run_hpo("BPR", num_samples=10)
-best_lgcn = run_hpo("LightGCN", num_samples=15)
+    This function orchestrates the full training pipeline using Ray Tune. It:
+    1. Initializes a Ray runtime environment
+    2. Defines the hyperparameter search space
+    3. Runs hyperparameter optimization independently for each supported model
+    4. Collects the best configuration per model
+    5. Shuts down Ray after tuning is complete
+    6. Retrains each model using its best hyperparameters on the full setup
+    For each model:
+    - A dedicated checkpoint directory is used
+    - Hyperparameter search is performed using a scheduler (ASHA) and a
+      basic variant generator
+    - The best trial is selected based on the configured validation metric
 
-# =============================================
-# Final training both for BPR and Light GCN
-# =============================================
-# Models to train
-models_to_train = {"BPR": best_bpr, "LightGCN": best_lgcn}
+    Returns:
+        None
+    """
+    # Initialize Ray
+    if not ray.is_initialized():
+        ray.init(
+            address=config["ray_tune"]["address"],
+            num_cpus=config["ray_tune"]["num_cpus"],
+            num_gpus=config["ray_tune"]["num_gpus"],
+            ignore_reinit_error=config["ray_tune"]["ignore_reinit_error"],
+            include_dashboard=config["ray_tune"]["include_dashboard"],
+            dashboard_host=config["ray_tune"]["dashboard_host"],
+            dashboard_port=config["ray_tune"]["dashboard_port"],
+            configure_logging=config["ray_tune"]["configure_logging"],
+            logging_level=config["ray_tune"]["logging_level"],
+            logging_format=config["ray_tune"]["logging_format"],
+            log_to_driver=config["ray_tune"]["log_to_driver"],
+        )
 
-# Retrain the models with their best
-# hyperparameters found
-for model_name, hyperparams in models_to_train.items():
-    run_recbole(
-        model=model_name,
-        dataset="amazon_elec",
-        config_dict={
-            **hyperparams,
-            "device": device,
-            "benchmark_filename": ["train", "valid", "test"],
-            "checkpoint_dir": f"./models/{model_name}_best",
-        },
-    )
+    # Define parameter space for Ray Tune
+    param_space = {k: tune.choice(v) for k, v in config["param_space"].items()}
+
+    # Find best hyperparameters for each model
+    tuning_results = {}
+    for model in SUPPORTED_MODELS:
+        # Determine the checkpoint directory based on the model
+        checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
+
+        # Define a scheduler
+        scheduler = ASHAScheduler()
+
+        # Define a search algorithm
+        search_alg = BasicVariantGenerator(
+            random_state=config["ray_tune"]["random_state"],
+        )
+
+        # Run Ray Tune to find the best hyperparameters
+        # and keep track of the results for each model
+        tuner = tune.Tuner(
+            tune.with_parameters(
+                _trainable,
+                base_config=config["recbole"],
+                dataset=config["dataset"]["name"],
+                model=model,
+                data_path=data_path,
+                checkpoint_dir=checkpoint_dir,
+                enable_tune=True,
+            ),
+            param_space=param_space,
+            tune_config=tune.TuneConfig(
+                metric=TUNING_VAL_METRIC["name"],
+                mode=TUNING_VAL_METRIC["mode"],
+                search_alg=search_alg,
+                scheduler=scheduler,
+                num_samples=config["ray_tune"]["num_samples"],
+            ),
+        )
+        tuning_results[model] = tuner.fit()
+
+    # Shutdown Ray after tuning is complete
+    ray.shutdown()
+
+    # Final training for each model with the best hyperparameters found
+    for model in SUPPORTED_MODELS:
+        # Get the best hyperparameters for the current model
+        best_config = tuning_results[model].get_best_result().config
+
+        # Determine the checkpoint directory based on the model
+        checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
+
+        # Retrain the model with its best hyperparameters found
+        _trainable(
+            config=best_config,
+            base_config=config["recbole"],
+            dataset=config["dataset"]["name"],
+            model=model,
+            data_path=data_path,
+            checkpoint_dir=checkpoint_dir,
+            enable_tune=False,
+        )
+
+
+if __name__ == "__main__":
+    train_recsys()
