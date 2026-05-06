@@ -10,4 +10,4 @@
 **/*.jsonl
 **/*.json
 **/*.pth
-**/*.log
+log_tensorboard
