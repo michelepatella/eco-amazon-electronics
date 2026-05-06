@@ -71,6 +71,13 @@ recbole:
   unused_col: null
 
   # ------------------------------------------------------------------------------------
+  # Description: Whether to filter interactions by users or items with no interactions
+  # Type: bool
+  # Constraints: True or False
+  # ------------------------------------------------------------------------------------
+  filter_inter_by_user_or_item: false
+
+  # ------------------------------------------------------------------------------------
   # Description: Predefined dataset split file names [train, valid, test]
   # Type: list[str]
   # Constraints: ["<train_name>", "<valid_name>", "<test_name>"]
