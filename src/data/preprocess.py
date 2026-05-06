@@ -36,7 +36,7 @@ from src.utils import load_config
 # Load configuration
 config = load_config()
 
-# Map datasets to their configurations (scalable and maintainable)
+# Map datasets to their configurations
 dataset_registry = {
     DATASET_NAME_ELEC: {
         "raw_path": DATA_RAW_AR23_UR_ELEC_PATH,
