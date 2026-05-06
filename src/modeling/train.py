@@ -3,6 +3,7 @@
 Train RecBole models with hyperparameter tuning.
 """
 
+import glob
 import hashlib
 import os
 import shutil
@@ -19,8 +20,10 @@ from src.const import (
     MODEL_NAME_BPR,
     MODEL_SUPPORTED_PARAMS,
     MODELS_ELEC_BPR_DIR,
+    MODELS_ELEC_BPR_PATH,
     MODELS_ELEC_BPR_PREDS_DIR,
     MODELS_ELEC_LIGHTGCN_DIR,
+    MODELS_ELEC_LIGHTGCN_PATH,
     MODELS_ELEC_LIGHTGCN_PREDS_DIR,
     SUPPORTED_DATASETS,
     SUPPORTED_MODELS,
@@ -231,6 +234,7 @@ def train_recsys() -> None:
         checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
 
         # Retrain the model with its best hyperparameters found
+
         _trainable(
             config=best_config,
             base_config=config["recbole"],
@@ -240,6 +244,19 @@ def train_recsys() -> None:
             checkpoint_dir=checkpoint_dir,
             enable_tune=False,
         )
+
+        # Rename the checkpoint file
+        ckpt = max(
+            glob.glob(os.path.join(checkpoint_dir, "*.pth")),
+            key=os.path.getctime,
+        )
+        target_path = (
+            MODELS_ELEC_BPR_PATH
+            if model == MODEL_NAME_BPR
+            else MODELS_ELEC_LIGHTGCN_PATH
+        )
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        os.replace(ckpt, target_path)
 
 
 if __name__ == "__main__":
