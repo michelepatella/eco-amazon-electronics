@@ -196,7 +196,7 @@ recbole:
   # Type: bool
   # Constraints: True or False
   # ------------------------------------------------------------------------------------
-  repeatable: false
+  repeatable: true
 
   # ------------------------------------------------------------------------------------
   # Description: List of evaluation metrics to compute and report
