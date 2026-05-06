@@ -18,6 +18,7 @@ from src.const import (
     DATA_PROCESSED_AR23_UR_DIR,
     DATASET_NAME_ELEC,
     MODEL_NAME_BPR,
+    MODEL_NAME_LIGHTGCN,
     MODEL_SUPPORTED_PARAMS,
     MODELS_ELEC_BPR_DIR,
     MODELS_ELEC_BPR_PATH,
@@ -39,14 +40,28 @@ assert config["dataset"]["name"] in SUPPORTED_DATASETS, (
     f"Supported dataset: {SUPPORTED_DATASETS}, got: {config['dataset']['name']}"
 )
 if config["dataset"]["name"] == DATASET_NAME_ELEC:
-    data_path = os.path.abspath(DATA_PROCESSED_AR23_UR_DIR)
-    bpr_dir = os.path.abspath(MODELS_ELEC_BPR_DIR)
-    lightgcn_dir = os.path.abspath(MODELS_ELEC_LIGHTGCN_DIR)
-    bpr_checkpoint_root_dir = os.path.abspath(MODELS_ELEC_BPR_DIR)
-    lightgcn_checkpoint_root_dir = os.path.abspath(MODELS_ELEC_LIGHTGCN_DIR)
+    # Map models to their registry information
+    model_registry = {
+        MODEL_NAME_BPR: {
+            "checkpoint_dir": MODELS_ELEC_BPR_DIR,
+            "model_path": MODELS_ELEC_BPR_PATH,
+            "preds_dir": MODELS_ELEC_BPR_PREDS_DIR,
+        },
+        MODEL_NAME_LIGHTGCN: {
+            "checkpoint_dir": MODELS_ELEC_LIGHTGCN_DIR,
+            "model_path": MODELS_ELEC_LIGHTGCN_PATH,
+            "preds_dir": MODELS_ELEC_LIGHTGCN_PREDS_DIR,
+        },
+    }
+
+    # Build checkpoint directories and directories to keep
+    checkpoint_dirs = {
+        model: os.path.abspath(model_registry[model]["checkpoint_dir"])
+        for model in SUPPORTED_MODELS
+    }
     keep_dirs = {
-        os.path.abspath(MODELS_ELEC_LIGHTGCN_PREDS_DIR),
-        os.path.abspath(MODELS_ELEC_BPR_PREDS_DIR),
+        os.path.abspath(model_registry[model]["preds_dir"])
+        for model in SUPPORTED_MODELS
     }
 
 
@@ -173,8 +188,8 @@ def train_recsys() -> None:
     # Find best hyperparameters for each model
     tuning_results = {}
     for model in SUPPORTED_MODELS:
-        # Determine the checkpoint directory based on the model
-        checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
+        # Get checkpoint directory
+        checkpoint_dir = checkpoint_dirs[model]
 
         # Define a scheduler
         scheduler = ASHAScheduler(
@@ -195,7 +210,7 @@ def train_recsys() -> None:
                 base_config=config["recbole"],
                 dataset=config["dataset"]["name"],
                 model=model,
-                data_path=data_path,
+                data_path=os.path.abspath(DATA_PROCESSED_AR23_UR_DIR),
                 checkpoint_dir=checkpoint_dir,
                 enable_tune=True,
             ),
@@ -214,10 +229,8 @@ def train_recsys() -> None:
     ray.shutdown()
 
     # Clean up any temporary checkpoint directories created during tuning
-    for checkpoint_root in [
-        bpr_checkpoint_root_dir,
-        lightgcn_checkpoint_root_dir,
-    ]:
+    for model in SUPPORTED_MODELS:
+        checkpoint_root = checkpoint_dirs[model]
         for name in os.listdir(checkpoint_root):
             path = os.path.join(checkpoint_root, name)
             if path in keep_dirs:
@@ -230,8 +243,8 @@ def train_recsys() -> None:
         # Get the best hyperparameters for the current model
         best_config = tuning_results[model].get_best_result().config
 
-        # Determine the checkpoint directory based on the model
-        checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
+        # Get checkpoint directory
+        checkpoint_dir = checkpoint_dirs[model]
 
         # Retrain the model with its best hyperparameters found
         _trainable(
@@ -239,21 +252,17 @@ def train_recsys() -> None:
             base_config=config["recbole"],
             dataset=config["dataset"]["name"],
             model=model,
-            data_path=data_path,
+            data_path=os.path.abspath(DATA_PROCESSED_AR23_UR_DIR),
             checkpoint_dir=checkpoint_dir,
             enable_tune=False,
         )
 
-        # Rename the checkpoint file
+        # Rename the checkpoint file to the final model path
         ckpt = max(
             glob.glob(os.path.join(checkpoint_dir, "*.pth")),
             key=os.path.getctime,
         )
-        target_path = (
-            MODELS_ELEC_BPR_PATH
-            if model == MODEL_NAME_BPR
-            else MODELS_ELEC_LIGHTGCN_PATH
-        )
+        target_path = os.path.abspath(model_registry[model]["model_path"])
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
         os.replace(ckpt, target_path)
 
