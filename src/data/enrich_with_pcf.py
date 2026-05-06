@@ -9,8 +9,7 @@ load_dotenv()
 
 
 def estimate_co2_for_product(product_data, llm_model, num_calls=4):
-    """Example of LLM prompting to predict the CO2eq of a product
-    """
+    """Example of LLM prompting to predict the CO2eq of a product"""
     prompt = f"""
     You are an expert in life cycle analysis (LCA) and CO2e emission calculation for electronic products.
     You must estimate the CO2e emissions, based on the entire life cycle (cradle to grave), for the following electronic product.
