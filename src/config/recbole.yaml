@@ -213,6 +213,13 @@ recbole:
   metrics: ["Recall", "NDCG", "GiniIndex", "AveragePopularity", "TailPercentage", "ItemCoverage", "Precision", "MRR", "Hit"]
 
   # ------------------------------------------------------------------------------------
+  # Description: List of K values for top-K evaluation metrics
+  # Type: list[int]
+  # Constraints: > 0
+  # ------------------------------------------------------------------------------------
+  topk: [5, 10, 20, 50]
+
+  # ------------------------------------------------------------------------------------
   # Description: Primary validation metric for early stopping and model selection
   # Type: str
   # Constraints: Valid metric name with optional @K suffix
