@@ -30,7 +30,7 @@
                                       └───────────────┘
 ```
 
-## RecBole Compatibility Fixes
+## RecBole (v1.2.0) Compatibility Fixes
 
 ### 1. `recbole/config/configurator.py`
 
