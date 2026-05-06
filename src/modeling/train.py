@@ -1,3 +1,8 @@
+"""src/modeling/train.py
+
+Train RecBole models with hyperparameter tuning.
+"""
+
 import hashlib
 import os
 
@@ -159,7 +164,7 @@ def train_recsys() -> None:
         # Determine the checkpoint directory based on the model
         checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
 
-        # Defixne a scheduler
+        # Define a scheduler
         scheduler = ASHAScheduler(
             max_t=config["ray_tune"]["max_t"],
             grace_period=config["ray_tune"]["grace_period"],
