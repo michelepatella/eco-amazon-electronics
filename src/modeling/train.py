@@ -159,8 +159,11 @@ def train_recsys() -> None:
         # Determine the checkpoint directory based on the model
         checkpoint_dir = bpr_dir if model == MODEL_NAME_BPR else lightgcn_dir
 
-        # Define a scheduler
-        scheduler = ASHAScheduler()
+        # Defixne a scheduler
+        scheduler = ASHAScheduler(
+            max_t=config["ray_tune"]["max_t"],
+            grace_period=config["ray_tune"]["grace_period"],
+        )
 
         # Define a search algorithm
         search_alg = BasicVariantGenerator(
@@ -181,8 +184,8 @@ def train_recsys() -> None:
             ),
             param_space=param_space,
             tune_config=tune.TuneConfig(
-                metric=TUNING_VAL_METRIC["name"],
                 mode=TUNING_VAL_METRIC["mode"],
+                metric=TUNING_VAL_METRIC["name"],
                 search_alg=search_alg,
                 scheduler=scheduler,
                 num_samples=config["ray_tune"]["num_samples"],
