@@ -36,16 +36,32 @@ from src.utils import load_config
 # Load configuration
 config = load_config()
 
+# Map datasets to their configurations (scalable and maintainable)
+dataset_registry = {
+    DATASET_NAME_ELEC: {
+        "raw_path": DATA_RAW_AR23_UR_ELEC_PATH,
+        "processed_full_path": DATA_PROCESSED_AR23_UR_ELEC_FULL_PATH,
+        "processed_train_path": DATA_PROCESSED_AR23_UR_ELEC_TRAIN_PATH,
+        "processed_valid_path": DATA_PROCESSED_AR23_UR_ELEC_VALID_PATH,
+        "processed_test_path": DATA_PROCESSED_AR23_UR_ELEC_TEST_PATH,
+    },
+}
+
 # Determine paths based on dataset name
 assert config["dataset"]["name"] in SUPPORTED_DATASETS, (
     f"Supported dataset: {SUPPORTED_DATASETS}, got: {config['dataset']['name']}"
 )
-if config["dataset"]["name"] == DATASET_NAME_ELEC:
-    raw_user_reviews_path = DATA_RAW_AR23_UR_ELEC_PATH
-    processed_user_reviews_path = DATA_PROCESSED_AR23_UR_ELEC_FULL_PATH
-    processed_user_reviews_train_path = DATA_PROCESSED_AR23_UR_ELEC_TRAIN_PATH
-    processed_user_reviews_valid_path = DATA_PROCESSED_AR23_UR_ELEC_VALID_PATH
-    processed_user_reviews_test_path = DATA_PROCESSED_AR23_UR_ELEC_TEST_PATH
+assert config["dataset"]["name"] in dataset_registry, (
+    f"Dataset configuration missing for: {config['dataset']['name']}"
+)
+
+dataset_name = config["dataset"]["name"]
+paths = dataset_registry[dataset_name]
+raw_user_reviews_path = paths["raw_path"]
+processed_user_reviews_path = paths["processed_full_path"]
+processed_user_reviews_train_path = paths["processed_train_path"]
+processed_user_reviews_valid_path = paths["processed_valid_path"]
+processed_user_reviews_test_path = paths["processed_test_path"]
 
 
 def _deduplicate_user_reviews(
