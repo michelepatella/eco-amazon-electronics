@@ -1,237 +1,234 @@
 recbole:
   # ------------------------------------------------------------------------------------
-  # Description: GPU IDs to use for training
+  # Description: GPU device ID(s) to use for training
   # Type: str
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: Single GPU ("0", "1", "2", etc.) or multi-GPU ("0,1,2")
   # ------------------------------------------------------------------------------------
   gpu_id: "0"
 
   # ------------------------------------------------------------------------------------
-  # Description: Number of worker processes for data loading
+  # Description: Number of worker processes for parallel data loading
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: >= 0
   # ------------------------------------------------------------------------------------
   worker: 0
 
   # ------------------------------------------------------------------------------------
-  # Description: Random seed for reproducibility
+  # Description: Random seed for reproducible results
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: >= 0
   # ------------------------------------------------------------------------------------
   seed: 42
 
   # ------------------------------------------------------------------------------------
-  # Description: Logging level controlling verbosity of training logs
+  # Description: Logging level controlling RecBole training verbosity
   # Type: str
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
   # ------------------------------------------------------------------------------------
   state: "INFO"
 
   # ------------------------------------------------------------------------------------
-  # Description: Reproducibility flag for RecBole
+  # Description: Enable reproducible results across all model runs
   # Type: bool
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: True or False
   # ------------------------------------------------------------------------------------
   reproducibility: true
 
   # ------------------------------------------------------------------------------------
-  # Description: Whether to show progress bars during training
+  # Description: Whether to show training progress bar
   # Type: bool
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: True or False
   # ------------------------------------------------------------------------------------
   show_progress: true
 
   # ------------------------------------------------------------------------------------
-  # Description: Whether to shuffle the data during training
+  # Description: Whether to shuffle training data before each epoch
   # Type: bool
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: True or False
   # ------------------------------------------------------------------------------------
   shuffle: true
 
   load_col:
     # ------------------------------------------------------------------------------------
-    # Description: List of columns to load from the dataset
+    # Description: List of dataset columns to load for interactions
     # Type: list[str]
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: Valid column names from dataset
     # ------------------------------------------------------------------------------------
     inter: ["user_id", "item_id"]
 
   # ------------------------------------------------------------------------------------
-  # Description: List of columns to unload from the dataset
+  # Description: List of dataset columns to explicitly unload (remove from memory)
   # Type: list[str]
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: Valid column names from dataset
   # ------------------------------------------------------------------------------------
   unload_col: null
 
   # ------------------------------------------------------------------------------------
-  # Description: List of columns loaded but not used
+  # Description: List of columns loaded but marked as unused in training
   # Type: list[str]
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: Valid column names from dataset
   # ------------------------------------------------------------------------------------
   unused_col: null
 
   # ------------------------------------------------------------------------------------
-  # Description: Predefined dataset splits (train/valid/test files)
+  # Description: Predefined dataset split file names [train, valid, test]
   # Type: list[str]
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: ["<train_name>", "<valid_name>", "<test_name>"]
   # ------------------------------------------------------------------------------------
   benchmark_filename: ["train", "valid", "test"]
 
   # ------------------------------------------------------------------------------------
-  # Description: Number of epochs to train the model
+  # Description: Number of training epochs
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: > 0
   # ------------------------------------------------------------------------------------
   epochs: 300
 
   # ------------------------------------------------------------------------------------
-  # Description: Learning algorithm to use for training
+  # Description: Optimization algorithm for training
   # Type: str
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: "adam", "sgd", "adagrad", "rmsprop", "sparse_adam"
   # ------------------------------------------------------------------------------------
   learner: "adam"
 
   train_neg_sample_args:
     # ------------------------------------------------------------------------------------
-    # Description: Negative sampling distribution for training
+    # Description: Negative sampling distribution strategy for training
     # Type: str
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: "uniform", "popularity"
     # ------------------------------------------------------------------------------------
     distribution: "uniform"
 
     # ------------------------------------------------------------------------------------
-    # Description: Number of negative samples to generate for each positive sample during
-    #              training
+    # Description: Number of negative samples to generate for each positive sample
     # Type: int
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: > 0
     # ------------------------------------------------------------------------------------
     sample_num: 1
 
     # ------------------------------------------------------------------------------------
-    # Description: Whether to use dynamic negative sampling during training
+    # Description: Whether to use dynamic negative sampling strategy during training
     # Type: bool
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: True or False
     # ------------------------------------------------------------------------------------
     dynamic: false
 
     # ------------------------------------------------------------------------------------
-    # Description: Number of candidate items to consider for negative sampling during
-    #              training
+    # Description: Number of candidate items to consider for negative sampling
     # Type: int
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: >= 0
     # ------------------------------------------------------------------------------------
     candidate_num: 0
 
   # ------------------------------------------------------------------------------------
-  # Description: Evaluation step interval for training
+  # Description: Evaluation interval during training (evaluate every N epochs)
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: > 0
   # ------------------------------------------------------------------------------------
   eval_step: 1
 
   # ------------------------------------------------------------------------------------
-  # Description: Early stopping step for training
+  # Description: Early stopping patience (stop after N epochs without improvement)
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: > 0
   # ------------------------------------------------------------------------------------
   stopping_step: 10
 
   # ------------------------------------------------------------------------------------
-  # Description: Gradient clipping norm for training
-  # Type: dict
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Description: Maximum norm for gradient clipping during training
+  # Type: float
+  # Constraints: > 0
   # ------------------------------------------------------------------------------------
   clip_grad_norm: null
 
   # ------------------------------------------------------------------------------------
-  # Description: Decimal place for loss values during training
+  # Description: Decimal places for loss values in logs
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: >= 0
   # ------------------------------------------------------------------------------------
   loss_decimal_place: 4
 
   # ------------------------------------------------------------------------------------
-  # Description: Whether to apply power operation in embedding regularization loss
+  # Description: Whether to apply power operation in L2 regularization loss calculation
   # Type: bool
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: True or False
   # ------------------------------------------------------------------------------------
   require_pow: false
 
   # ------------------------------------------------------------------------------------
-  # Description: Whether to use automatic mixed precision (AMP) during training
+  # Description: Enable automatic mixed precision (AMP) training for faster computation
   # Type: bool
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: True or False
   # ------------------------------------------------------------------------------------
   enable_amp: false
 
   # ------------------------------------------------------------------------------------
-  # Description: Whether to use gradient scaler for AMP during training
+  # Description: Use gradient scaler with AMP to prevent gradient underflow
   # Type: bool
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: True or False
   # ------------------------------------------------------------------------------------
   enable_scaler: false
 
   eval_args:
     # ------------------------------------------------------------------------------------
-    # Description: Grouping method for evaluation
+    # Description: Grouping method for evaluation (group results by user or item)
     # Type: str
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: "user", "item"
     # ------------------------------------------------------------------------------------
     group_by: "user"
 
     # ------------------------------------------------------------------------------------
-    # Description: Order of evaluation
+    # Description: Recommendation ordering strategy for evaluation
     # Type: str
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: "RO", "TO", "UO"
     # ------------------------------------------------------------------------------------
     order: "RO"
 
     # ------------------------------------------------------------------------------------
-    # Description: Evaluation strategy (full ranking or sampled negatives)
+    # Description: Evaluation mode for ranking metrics computation
     # Type: str
-    # Constraints: Read RecBole documentation (https://recbole.io/docs)
+    # Constraints: "full", "unbalanced"
     # ------------------------------------------------------------------------------------
     mode: "full"
 
   # ------------------------------------------------------------------------------------
-  # Description: Whether the recommendation is deterministic
+  # Description: Whether recommendation results are deterministic (no random sampling)
   # Type: bool
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: True or False
   # ------------------------------------------------------------------------------------
   repeatable: false
 
   # ------------------------------------------------------------------------------------
-  # Description: List of evaluation metrics to compute
+  # Description: List of evaluation metrics to compute and report
   # Type: list[str]
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: Valid metric names from RecBole
   # ------------------------------------------------------------------------------------
   metrics: ["Recall", "NDCG", "GiniIndex", "AveragePopularity", "TailPercentage", "ItemCoverage", "Precision", "MRR", "Hit"]
 
   # ------------------------------------------------------------------------------------
-  # Description: Validation metric to use for early stopping and model selection
-  #              during training
+  # Description: Primary validation metric for early stopping and model selection
   # Type: str
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: Valid metric name with optional @K suffix
   # ------------------------------------------------------------------------------------
-  valid_metric: "Recall@10"
+  valid_metric: "NDCG@10"
 
   # ------------------------------------------------------------------------------------
-  # Description: Batch size for evaluation
+  # Description: Batch size for evaluation/prediction on validation and test sets
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: > 0
   # ------------------------------------------------------------------------------------
   eval_batch_size: 4096
 
   # ------------------------------------------------------------------------------------
-  # Description: Decimal place for evaluation metrics
+  # Description: Decimal places for evaluation metrics in logs and reports
   # Type: int
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: >= 0
   # ------------------------------------------------------------------------------------
   metric_decimal_place: 4
 
   # ------------------------------------------------------------------------------------
-  # Description: Device to use for computations
+  # Description: Computing device for model training and inference
   # Type: str
-  # Constraints: Read RecBole documentation (https://recbole.io/docs)
+  # Constraints: "cpu", "cuda", "mps"
   # ------------------------------------------------------------------------------------
   device: "cpu"
