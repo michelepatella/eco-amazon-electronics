@@ -8,11 +8,17 @@ from recbole.quick_start import load_data_and_model
 from recbole.utils.case_study import full_sort_topk
 from tqdm import tqdm
 
+from const import SUPPORTED_LLMS, SUPPORTED_RERANKING_ALPHAS
 from src.utils import get_co2e_kg_estimations, get_latest_checkpoint
 
 
 def pcf_aware_reranker(
-    co2e_scores, item_list_internal, score_list, dataset, id_to_asin, alpha,
+    co2e_scores,
+    item_list_internal,
+    score_list,
+    dataset,
+    id_to_asin,
+    alpha,
 ):
     """Calculates PCF-aware to re-rank recommendations."""
     # Retrieve tokens
@@ -80,7 +86,11 @@ def get_top_k_recommendations(model, k, config):
         # and users in the current batch,
         # returning top-k predictions
         batch_scores, batch_iids = full_sort_topk(
-            uid_tensor, model, test_data, k=k, device=config["device"],
+            uid_tensor,
+            model,
+            test_data,
+            k=k,
+            device=config["device"],
         )
         all_scores.append(batch_scores.cpu())
         all_iids.append(batch_iids.cpu())
@@ -92,7 +102,12 @@ def get_top_k_recommendations(model, k, config):
 
 
 def get_reranked_top_k_recommendations(
-    final_scores, final_iids, id_to_asin, co2e_scores, alpha, k,
+    final_scores,
+    final_iids,
+    id_to_asin,
+    co2e_scores,
+    alpha,
+    k,
 ):
     # Get user and item IDs external to RecBole,
     # which match with the original dataset info
@@ -149,85 +164,89 @@ def get_reranked_top_k_recommendations(
     return pos_matrix_list, pos_len_list, reranked_items_all_users
 
 
-# =============================================
-# Setup
-# =============================================
-alpha_values = [0.25, 0.5, 0.75, 1.0]
-k = 100
+def infer_recsys() -> None:
+    k = 100
 
-# "gemini-2_5-flash" or "o3-mini"
-model_tag = "o3-mini"
+    # Load the latest, best BPR and LightGCN trained models
+    bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
+        model_file=get_latest_checkpoint("BPR_best"),
+    )
+    light_gcn_config, light_gcn_model, *_ = load_data_and_model(
+        model_file=get_latest_checkpoint("LightGCN_best"),
+    )
 
-# Load the latest, best BPR and LightGCN trained models
-bpr_config, bpr_model, dataset, *_, test_data = load_data_and_model(
-    model_file=get_latest_checkpoint("BPR_best"),
-)
-light_gcn_config, light_gcn_model, *_ = load_data_and_model(
-    model_file=get_latest_checkpoint("LightGCN_best"),
-)
+    # Load CO2 score estimations
+    for llm in SUPPORTED_LLMS:
+        co2e_scores = get_co2e_kg_estimations(model_tag)
 
-# Load CO2 score estimations
-co2e_scores = get_co2e_kg_estimations(model_tag)
+    # Load item_index -> parent_asin mapping
+    item_map_df = pd.read_csv(
+        "../2_recbole/process_data/maps/item_map.tsv",
+        sep="\t",
+    )
+    id_to_asin = dict(
+        zip(item_map_df["item_index"], item_map_df["parent_asin"]),
+    )
 
-# Load item_index -> parent_asin mapping
-item_map_df = pd.read_csv(
-    "../2_recbole/process_data/maps/item_map.tsv", sep="\t",
-)
-id_to_asin = dict(zip(item_map_df["item_index"], item_map_df["parent_asin"]))
+    # =============================================
+    # Standard recommendations
+    # =============================================
+    # Retrieve the standard recommendations using both trained models
+    final_scores_bpr, final_iids_bpr = get_top_k_recommendations(
+        model=bpr_model,
+        k=k,
+        config=bpr_config,
+    )
+    final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
+        model=light_gcn_model,
+        k=k,
+        config=light_gcn_config,
+    )
 
-# =============================================
-# Standard recommendations
-# =============================================
-# Retrieve the standard recommendations using both trained models
-final_scores_bpr, final_iids_bpr = get_top_k_recommendations(
-    model=bpr_model, k=k, config=bpr_config,
-)
-final_scores_light_gcn, final_iids_light_gcn = get_top_k_recommendations(
-    model=light_gcn_model, k=k, config=light_gcn_config,
-)
-
-# =============================================
-# PCF-aware recommendations
-# =============================================
-for alpha in alpha_values:
-    pos_matrix_bpr, pos_len_bpr, items_bpr = (
-        get_reranked_top_k_recommendations(
-            final_scores=final_scores_bpr,
-            final_iids=final_iids_bpr,
-            id_to_asin=id_to_asin,
-            co2e_scores=co2e_scores,
-            alpha=alpha,
-            k=k,
+    # =============================================
+    # PCF-aware recommendations
+    # =============================================
+    for alpha in SUPPORTED_RERANKING_ALPHAS:
+        pos_matrix_bpr, pos_len_bpr, items_bpr = (
+            get_reranked_top_k_recommendations(
+                final_scores=final_scores_bpr,
+                final_iids=final_iids_bpr,
+                id_to_asin=id_to_asin,
+                co2e_scores=co2e_scores,
+                alpha=alpha,
+                k=k,
+            )
         )
-    )
-    results_bpr = {
-        "pos_matrix": pos_matrix_bpr,
-        "pos_len": pos_len_bpr,
-        "reranked_items": items_bpr,
-        "model": "BPR",
-        "alpha": alpha,
-    }
-    torch.save(
-        results_bpr, f"results/BPR/{model_tag}/results_alpha_{alpha}.pth",
-    )
-
-    pos_matrix_lgcn, pos_len_lgcn, items_lgcn = (
-        get_reranked_top_k_recommendations(
-            final_scores=final_scores_light_gcn,
-            final_iids=final_iids_light_gcn,
-            id_to_asin=id_to_asin,
-            co2e_scores=co2e_scores,
-            alpha=alpha,
-            k=k,
+        results_bpr = {
+            "pos_matrix": pos_matrix_bpr,
+            "pos_len": pos_len_bpr,
+            "reranked_items": items_bpr,
+            "model": "BPR",
+            "alpha": alpha,
+        }
+        torch.save(
+            results_bpr,
+            f"results/BPR/{model_tag}/results_alpha_{alpha}.pth",
         )
-    )
-    results_lgcn = {
-        "pos_matrix": pos_matrix_lgcn,
-        "pos_len": pos_len_lgcn,
-        "reranked_items": items_lgcn,
-        "model": "LightGCN",
-        "alpha": alpha,
-    }
-    torch.save(
-        results_lgcn, f"results/LightGCN/{model_tag}/results_alpha_{alpha}.pth",
-    )
+
+        pos_matrix_lgcn, pos_len_lgcn, items_lgcn = (
+            get_reranked_top_k_recommendations(
+                final_scores=final_scores_light_gcn,
+                final_iids=final_iids_light_gcn,
+                id_to_asin=id_to_asin,
+                co2e_scores=co2e_scores,
+                alpha=alpha,
+                k=k,
+            )
+        )
+        results_lgcn = {
+            "pos_matrix": pos_matrix_lgcn,
+            "pos_len": pos_len_lgcn,
+            "reranked_items": items_lgcn,
+            "model": "LightGCN",
+            "alpha": alpha,
+        }
+        torch.save(
+            results_lgcn,
+            f"results/LightGCN/{model_tag}/results_alpha_{alpha}.pth",
+        )
