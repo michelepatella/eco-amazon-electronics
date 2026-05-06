@@ -33,6 +33,8 @@
 
 ### 1. `recbole/config/configurator.py`
 
+> Fix for NumPy compatibility issue due to removal of deprecated aliases in recent versions.
+
 Replace:
 
 ```python
@@ -59,10 +61,9 @@ np.long = int
 np.unicode = str
 ```
 
-Fix for NumPy compatibility issue due to removal of deprecated aliases in recent versions.
-
-
 ### 2. `recbole/trainer/trainer.py`
+
+> Fix for PyTorch checkpoint loading to ensure consistent model deserialization across CPU/GPU environments and compatibility with newer PyTorch versions.
 
 Replace:
 
@@ -80,9 +81,9 @@ checkpoint = torch.load(
 )
 ```
 
-Fix for PyTorch checkpoint loading to ensure consistent model deserialization across CPU/GPU environments and compatibility with newer PyTorch versions.
-
 ### 3. `recbole/model/general_recommender/lightgcn.py`
+
+> Fix for deprecated sparse matrix method `_update()` removed in modern SciPy versions.
 
 Replace:
 
@@ -96,5 +97,3 @@ With:
 for (i, j), val in data_dict.items():
     A[i, j] = val
 ```
-
-Fix for deprecated sparse matrix method `_update()` removed in modern SciPy versions.
