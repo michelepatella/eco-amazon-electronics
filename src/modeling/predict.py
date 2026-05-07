@@ -1,3 +1,8 @@
+"""src/modeling/predict.py
+
+Predict with trained RecBole models and apply sustainability-aware re-ranking.
+"""
+
 import math
 from collections import defaultdict
 
@@ -102,47 +107,83 @@ if config["dataset"]["name"] == DATASET_NAME_ELEC:
     }
 
 
-def pcf_aware_reranker(
-    co2e_scores,
-    item_list_internal,
-    score_list,
-    dataset,
-    id_to_asin,
-    alpha,
-):
-    """Calculates PCF-aware to re-rank recommendations."""
-    # Retrieve tokens
-    external_items = []
-    for i in item_list_internal:
-        raw_token = dataset.id2token(dataset.iid_field, int(i))
+def _compute_sas_scores(
+    emission_data: dict,
+    item_ids: torch.Tensor,
+    scores: list[float],
+    dataset: Dataset,
+    item_map: dict,
+    alpha: float,
+) -> np.ndarray:
+    """Re-ranks a list of recommended items using a sustainability-aware scoring
+    (SaS) function.
+
+    This function combines recommendation relevance scores with emission data
+    to produce a sustainability-aware ranking. Specifically, for each recommended item:
+    1. Converts internal RecBole item IDs to external ASIN identifiers
+    2. Retrieves the corresponding emission values
+    3. Normalizes both recommendation scores and emission values
+    4. Combines them using a weighted sustainability-aware score (SaS)
+    5. Sorts items according to the resulting scores
+    The final ranking balances recommendation relevance and sustainability
+    according to the provided alpha parameter.
+
+    Args:
+        emission_data (dict):
+            Mapping from external item identifiers (ASIN) to emission values.
+
+        item_ids (torch.Tensor):
+            Sequence of internal RecBole item IDs representing the
+            recommended items for a user.
+
+        scores (list[float]):
+            Recommendation relevance scores associated with the input items.
+
+        dataset (Dataset):
+            RecBole dataset object.
+
+        item_map (dict):
+            Mapping from internal item indices to external ASIN identifiers.
+
+        alpha (float):
+            Weighting factor controlling the trade-off between recommendation
+            relevance and sustainability.
+
+    Returns:
+        np.ndarray:
+            Array containing the re-ranked internal item IDs ordered
+            according to the sustainability-aware scores.
+    """
+    # Convert internal RecBole item IDs to external ASIN identifiers
+    external_item_ids = []
+    for item_id in item_ids:
+        raw_token = dataset.id2token(dataset.iid_field, int(item_id))
         item_idx = int(raw_token)
-        asin = id_to_asin.get(item_idx)
-        external_items.append(asin)
+        asin = item_map.get(item_idx)
+        external_item_ids.append(asin)
 
-    # Retrieve PCF values
-    pcf_values = [co2e_scores.get(asin) for asin in external_items]
-    pcf_array = np.array(pcf_values)
-
-    # Normalize PCF values
-    max_pcf, min_pcf = pcf_array.max(), pcf_array.min()
-    pcf_norm = (max_pcf - pcf_array) / (max_pcf - min_pcf)
-
-    # Normalize predictions
-    preds = np.array(score_list)
-    preds_norm = (preds - preds.min()) / (preds.max() - preds.min())
-
-    # Calculate SaS
-    sas_scores = alpha * preds_norm + (1 - alpha) * pcf_norm
-
-    # Sort items by SaS descending
-    sorted_indices = np.argsort(sas_scores)[::-1]
-    items_np = (
-        item_list_internal.cpu().numpy()
-        if torch.is_tensor(item_list_internal)
-        else np.array(item_list_internal)
+    # Retrieve emission values for the recommended items
+    emission_values = np.array(
+        [emission_data.get(asin) for asin in external_item_ids],
     )
 
-    return items_np[sorted_indices].copy()
+    # Normalize emission values (min-max normalization)
+    emission_values_norm = (emission_values.max() - emission_values) / (
+        emission_values.max() - emission_values.min()
+    )
+
+    # Normalize recommendation scores (min-max normalization)
+    scores = np.array(scores)
+    scores_norm = (scores - scores.min()) / (scores.max() - scores.min())
+
+    # Compute sustainability-aware scores
+    sas_scores = alpha * scores_norm + (1 - alpha) * emission_values_norm
+
+    # Sort items by sustainability-aware score in descending order
+    sas_scores_sorted = np.argsort(sas_scores)[::-1]
+
+    # Convert item IDs to NumPy and reorder them by sustainability-aware scores
+    return item_ids.cpu().numpy()[sas_scores_sorted].copy()
 
 
 def _compute_top_k_recommendations(
@@ -313,12 +354,12 @@ def _rerank_top_k_recommendations(
         ),
     ):
         # Re-rank the top-k recommendations for the current user
-        user_reranked_item_ids = pcf_aware_reranker(
-            co2e_scores=emission_data,
-            item_list_internal=item_ids[idx],
-            score_list=scores[idx].tolist(),
+        user_reranked_item_ids = _compute_sas_scores(
+            emission_data=emission_data,
+            item_ids=item_ids[idx],
+            scores=scores[idx].tolist(),
             dataset=dataset,
-            id_to_asin=item_map,
+            item_map=item_map,
             alpha=alpha,
         )
 
@@ -342,6 +383,18 @@ def _rerank_top_k_recommendations(
 
 
 def infer_recsys() -> None:
+    """Runs the full recommendation inference pipeline including:
+    1. Loading trained recommendation models
+    2. Loading emission data
+    3. Loading (Item Index, Parent ASIN) mapping
+    4. Computing top-K recommendations for all users
+    5. Re-ranking recommendations using sustainability-aware scoring (SaS)
+    6. Evaluating reranked lists against ground truth
+    7. Saving results
+
+    Returns:
+        None
+    """
     # Load models and dataset
     models_bundle = {}
     for model in SUPPORTED_MODELS:
@@ -359,7 +412,7 @@ def infer_recsys() -> None:
         for llm in SUPPORTED_LLMS
     }
 
-    # Load item_index -> parent_asin mapping
+    # Load (Item Index, Parent ASIN) mapping
     item_map_df = pd.read_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t")
     item_map = dict(
         zip(
@@ -420,3 +473,7 @@ def infer_recsys() -> None:
                     results,
                     model_registry[model]["preds_paths"][llm][alpha],
                 )
+
+
+if __name__ == "__main__":
+    infer_recsys()
