@@ -350,7 +350,7 @@ def _rerank_top_k_recommendations(
     for idx, user_id in enumerate(
         tqdm(
             user_ids,
-            desc=f"Re-ranking top-{top_k} recommendations for {tot_users} users",
+            desc=f"Re-ranking top-{top_k} recommendations for {tot_users} users with alpha={alpha}",
         ),
     ):
         # Re-rank the top-k recommendations for the current user
