@@ -9,11 +9,11 @@
                   └─────────────┼─────────────────────────────┼─────────────┘
                                 │                             │
                      ╔══════════▼══════════╗       ╔══════════▼══════════╗
-                     ║  Data Preprocessing ║       ║    PCF Enrichment   ║
+                     ║  Data Preprocessing ║       ║ Emission Enrichment ║
                      ╚══════════┬══════════╝       ╚══════════┬══════════╝
                                 │                             │
                      ╔══════════▼══════════╗       ┌----------▼----------┐
-                     ║    Model Training   ║       │     PCF-Enriched    │
+                     ║    Model Training   ║       │  Emission-Enriched  │
                      ╚══════════┬══════════╝       │    Item Metadata    │
                                 │                  └----------┬----------┘
                      ╔══════════▼══════════╗                  │
@@ -42,9 +42,12 @@
 
 ## RecBole (v1.2.0) Compatibility Fixes
 
-### 1. `recbole/config/configurator.py`
+### 1. `recbole/config/configurator.py`, `recbole/evaluator/metrics.py`
 
 > Fix for NumPy compatibility issue due to removal of deprecated aliases in recent versions.
+
+
+#### 1.1 `recbole/config/configurator.py`
 
 Replace:
 
@@ -70,6 +73,14 @@ np.object = object
 np.str = str
 np.long = int
 np.unicode = str
+```
+
+#### 1.2 `recbole/evaluator/metrics.py`
+
+At the beginning of the script, add:
+
+```python
+np.float = float
 ```
 
 ### 2. `recbole/trainer/trainer.py`, `recbole/quick_start/quick_start.py`
