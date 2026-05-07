@@ -1,8 +1,6 @@
 """src/const.py
 
 Project constants.
-
-Centralize all constant values used across the project.
 """
 
 # ============================================================================
@@ -52,13 +50,6 @@ MODEL_NAME_LIGHTGCN = "LightGCN"
 # Supported models
 SUPPORTED_MODELS = [MODEL_NAME_BPR, MODEL_NAME_LIGHTGCN]
 
-# LLM names
-LLM_NAME_G25F = "gemini_2_5_flash"
-LLM_NAME_O3M = "openai_o3_mini"
-
-# Supported LLMs
-SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
-
 # Supported model hyperparameters
 MODEL_SUPPORTED_PARAMS = {
     "BPR": {
@@ -76,6 +67,13 @@ MODEL_SUPPORTED_PARAMS = {
         "train_batch_size",
     },
 }
+
+# LLM names
+LLM_NAME_G25F = "gemini_2_5_flash"
+LLM_NAME_O3M = "openai_o3_mini"
+
+# Supported LLMs
+SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
 
 # ============================================================================
 # RE-RANKING ALPHAS
