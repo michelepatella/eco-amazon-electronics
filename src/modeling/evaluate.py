@@ -1,153 +1,351 @@
 import numpy as np
 import pandas as pd
 import torch
+from recbole.data.dataset import Dataset
 from recbole.evaluator import Evaluator
 from recbole.quick_start import load_data_and_model
+from tqdm import tqdm
 
-from src.utils import get_co2e_kg_estimations, get_latest_checkpoint
+from src.const import (
+    DATA_INTERIM_MAPS_IMAP_PATH,
+    DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
+    DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
+    DATASET_NAME_ELEC,
+    LLM_NAME_G25F,
+    LLM_NAME_O3M,
+    MODEL_NAME_BPR,
+    MODEL_NAME_LIGHTGCN,
+    MODELS_ELEC_BPR_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_BAL_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_PURE_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_REL_PATH,
+    MODELS_ELEC_BPR_PREDS_G25F_SUS_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_BAL_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_PURE_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_REL_PATH,
+    MODELS_ELEC_BPR_PREDS_O3M_SUS_PATH,
+    MODELS_ELEC_LIGHTGCN_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_BAL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_PURE_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_REL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_G25F_SUS_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_BAL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_PURE_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_REL_PATH,
+    MODELS_ELEC_LIGHTGCN_PREDS_O3M_SUS_PATH,
+    RERANKING_ALPHA_BAL,
+    RERANKING_ALPHA_PURE,
+    RERANKING_ALPHA_REL,
+    RERANKING_ALPHA_SUS,
+    SUPPORTED_DATASETS,
+    SUPPORTED_LLMS,
+    SUPPORTED_MODELS,
+    SUPPORTED_RERANKING_ALPHAS,
+)
+from src.utils import load_config, load_jsonl
+
+# Load configuration
+config = load_config()
+
+# Determine paths based on dataset name
+assert config["dataset"]["name"] in SUPPORTED_DATASETS, (
+    f"Supported dataset: {SUPPORTED_DATASETS}, got: {config['dataset']['name']}"
+)
+if config["dataset"]["name"] == DATASET_NAME_ELEC:
+    # Map models to their registry information
+    model_registry = {
+        MODEL_NAME_BPR: {
+            "model_path": MODELS_ELEC_BPR_PATH,
+            "preds_paths": {
+                LLM_NAME_G25F: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_BPR_PREDS_G25F_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_BPR_PREDS_G25F_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_BPR_PREDS_G25F_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_BPR_PREDS_G25F_PURE_PATH,
+                },
+                LLM_NAME_O3M: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_BPR_PREDS_O3M_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_BPR_PREDS_O3M_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_BPR_PREDS_O3M_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_BPR_PREDS_O3M_PURE_PATH,
+                },
+            },
+        },
+        MODEL_NAME_LIGHTGCN: {
+            "model_path": MODELS_ELEC_LIGHTGCN_PATH,
+            "preds_paths": {
+                LLM_NAME_G25F: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_LIGHTGCN_PREDS_G25F_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_LIGHTGCN_PREDS_G25F_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_LIGHTGCN_PREDS_G25F_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_LIGHTGCN_PREDS_G25F_PURE_PATH,
+                },
+                LLM_NAME_O3M: {
+                    RERANKING_ALPHA_SUS: MODELS_ELEC_LIGHTGCN_PREDS_O3M_SUS_PATH,
+                    RERANKING_ALPHA_BAL: MODELS_ELEC_LIGHTGCN_PREDS_O3M_BAL_PATH,
+                    RERANKING_ALPHA_REL: MODELS_ELEC_LIGHTGCN_PREDS_O3M_REL_PATH,
+                    RERANKING_ALPHA_PURE: MODELS_ELEC_LIGHTGCN_PREDS_O3M_PURE_PATH,
+                },
+            },
+        },
+    }
+
+    # Map models to their enriched item metadata paths
+    emission_data_paths = {
+        LLM_NAME_G25F: DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
+        LLM_NAME_O3M: DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
+    }
 
 
-def calculate_average_pcf(
-    reranked_items_list, id_to_asin, scores_dict, dataset, k,
-):
-    """Calculate average PCF across all the users based on the first-k recommendations."""
-    total_pcf = 0
-    count = 0
-    for user_items in reranked_items_list:
-        for item_id in user_items[:k]:
-            token = dataset.id2token(dataset.iid_field, int(item_id))
-            asin = id_to_asin.get(int(token))
-            pcf = scores_dict.get(asin)
-            if pcf is not None:
-                total_pcf += pcf
-                count += 1
-    return total_pcf / count if count > 0 else 0
+def _compute_avg_emissions(
+    reranked_items: list,
+    item_map: dict,
+    emission_data: dict,
+    top_k: int,
+) -> float:
+    """Compute system-level average emissions of recommended items.
 
+    This function calculates the average emission footprint of the recommender
+    system by aggregating emissions across all recommended items (top-k per
+    user) and then averaging over the total number of valid items.
 
-def evaluate_model_results(
-    data, k, config, dataset, id_to_asin, co2e_scores, item_cnt,
-):
-    """Evaluate the RecSys both on RecBole and sustainability metrics, considering
-    the top-k recommendations.
+    Args:
+        reranked_items (list):
+            List of reranked recommendation lists, one per user.
+
+        item_map (dict):
+            Mapping from internal item IDs to external identifiers.
+
+        emission_data (dict):
+            Mapping from item identifiers to emission values.
+
+        top_k (int):
+            Number of top-ranked items considered per user.
+
+    Returns:
+        float:
+            System-level average emission per recommended item.
     """
-    # Retrieve top-k re-ranked items and prepare tensors
-    # for RecBole (considering just the first-k items)
-    reranked_items_list = data["reranked_items"]
-    reranked_np = np.array(reranked_items_list)[:, :k]
-    reranked_items = torch.tensor(reranked_np, device=config["device"])
+    # Compute the average emissions for the top-k recommended
+    # items across all users
+    tot_emissions = 0.0
+    count = 0
+    for user_items in reranked_items:
+        for item_id in user_items[:top_k]:
+            asin = item_map.get(int(item_id))
+            emission_value = emission_data.get(asin)
+            if emission_value is not None:
+                tot_emissions += emission_value
+                count += 1
+    return tot_emissions / count if count > 0 else 0.0
 
-    pos_matrix = torch.tensor(data["pos_matrix"], device=config["device"])[
-        :, :k,
-    ]
-    pos_len = torch.tensor(data["pos_len"], device=config["device"]).view(
-        -1, 1,
-    )
 
-    # Run RecBole evaluation, defining its configuration
-    config["topk"] = [k]
+def _compute_evaluation_metrics(
+    preds_data: dict,
+    top_k: int,
+    dataset: Dataset,
+    item_map: dict,
+    emission_data: dict,
+    item_popularity: list[tuple[int, int]],
+    config: dict,
+) -> dict:
+    """Compute evaluation metrics for a single recommendation run.
+
+    This function evaluates a reranked recommendation output using both
+    standard RecBole metrics and sustainability-aware metrics. It performs:
+    1. Truncation of predicted item lists to the specified top-k
+    2. Construction of the RecBole evaluation input structure
+    3. Execution of RecBole's Evaluator for ranking metrics
+    4. Computation of average emissions over recommended items
+    5. Aggregation of all metrics into a unified result dictionary
+
+    Args:
+        preds_data (dict):
+            Dictionary containing model predictions and evaluation artifacts:
+            - reranked_item_ids: list of ranked item IDs per user
+            - reranked_items: full reranked lists per user
+            - pos_matrix: binary relevance matrix
+            - pos_len: number of relevant items per user
+            - model: model name identifier
+            - alpha: reranking parameter value
+
+        top_k (int):
+            Number of top-ranked items considered for evaluation.
+
+        dataset (Dataset):
+            RecBole dataset object.
+
+        item_map (dict):
+            Mapping from internal item indices to external item identifiers.
+
+        emission_data (dict):
+            Mapping from item identifiers to emission values.
+
+        item_popularity (list[tuple[int, int]]):
+            List of (item_id, count) pairs representing item popularity
+            in the training set.
+
+        config (dict):
+            RecBole evaluation configuration dictionary, extended locally
+            with the current top-K setting.
+
+    Returns:
+        dict:
+            Dictionary containing:
+            - MODEL: model identifier
+            - ALPHA: reranking weight parameter
+            - TOP-K: evaluated cutoff
+            - EMISSIONS: average emission score
+            - Standard RecBole metrics specified in the configuration
+            - F1: harmonic mean of precision and recall (if precision and recall
+              are available)
+    """
+    # Get prediction data
+    reranked_item_ids = np.array(preds_data["reranked_item_ids"])[:, :top_k]
+    reranked_item_ids = torch.tensor(reranked_item_ids)
+    pos_matrix = torch.tensor(preds_data["pos_matrix"])[:, :top_k]
+    pos_len = torch.tensor(preds_data["pos_len"]).view(-1, 1)
+
+    # Overwrite RecBole configuration to set the current top-k value
+    config = {
+        **config,
+        "topk": [top_k],
+    }
+
+    # Input format for RecBole Evaluator
     struct = {
         "rec.topk": torch.cat((pos_matrix, pos_len), dim=1).cpu(),
-        "rec.items": reranked_items.cpu(),
+        "rec.items": reranked_item_ids.cpu(),
         "data.num_items": dataset.item_num,
-        "data.count_items": item_cnt,
+        "data.count_items": item_popularity,
     }
-    rec_results = Evaluator(config).evaluate(struct)
 
-    # Calculate sustainability metrics
-    avg_pcf_est = calculate_average_pcf(
-        reranked_items_list, id_to_asin, co2e_scores, dataset, k,
+    # Compute evaluation metrics using RecBole Evaluator
+    results = Evaluator(config).evaluate(struct)
+
+    # Compute average emissions for the top-k recommended items
+    # across all users
+    avg_emissions = _compute_avg_emissions(
+        reranked_items=preds_data["reranked_item_ids"],
+        item_map=item_map,
+        emission_data=emission_data,
+        top_k=top_k,
     )
 
-    # Collect and clean results
-    res = {
-        "MODEL": data["model"],
-        "ALPHA": data["alpha"],
-        "K": k,
-        "PCF": round(avg_pcf_est, 4),
+    # Aggregate evaluation results
+    base_results = results
+    results = {
+        "MODEL": preds_data["model"],
+        "ALPHA": preds_data["alpha"],
+        "TOP-K": top_k,
+        "EMISSIONS": avg_emissions,
+        **{
+            k.split("@")[0].upper(): v
+            for k, v in base_results.items()
+            if isinstance(k, str) and "@" in k
+        },
+        "F1": (lambda p, r: (2 * p * r / (p + r)) if (p + r) > 0 else 0.0)(
+            {
+                k.split("@")[0].upper(): v
+                for k, v in base_results.items()
+                if isinstance(k, str) and "@" in k
+            }.get("PRECISION"),
+            {
+                k.split("@")[0].upper(): v
+                for k, v in base_results.items()
+                if isinstance(k, str) and "@" in k
+            }.get("RECALL"),
+        ),
     }
-    for m, v in rec_results.items():
-        metric_name = m.split("@")[0].upper()
-        res[metric_name] = round(v, 4)
 
-    # Calculate F1
-    prec = res.get("PRECISION")
-    rec = res.get("RECALL")
-    if prec is not None and rec is not None:
-        if (prec + rec) > 0:
-            res["F1"] = round(2 * (prec * rec) / (prec + rec), 4)
-        else:
-            res["F1"] = 0.0
-
-    return res
+    return results
 
 
-# =============================================
-# Setup
-# =============================================
-# "gemini-2_5-flash" or "o3-mini"
-model_tag = "o3-mini"
-alpha_values = [0.25, 0.5, 0.75, 1.0]
-models = ["BPR", "LightGCN"]
-k_values = [5, 10, 20, 50]
+def evaluate_recsys() -> None:
+    """Run evaluation for all recommendation models and configurations.
 
-# Load configuration and dataset
-config, _, dataset, *_ = load_data_and_model(
-    model_file=get_latest_checkpoint("LightGCN_best"),
-)
+    This function performs a complete evaluation of the recommender system across
+    all the configurations. The evaluation includes both standard RecBole
+    and sustainability-aware metrics based on emissions. The pipeline steps are:
+    1. Load trained recommendation models and associated datasets
+    2. Load item-level emission data for sustainability evaluation
+    3. Load (Item Index, Parent ASIN) mapping
+    4. Compute item popularity statistics from the training set
+    5. Iterate over all evaluation configurations
+    6. Load precomputed reranked predictions
+    7. Compute evaluation metrics using RecBole and sustainability scoring
+    8. Aggregate all results
 
-# Upload configuration to define evaluation metrics
-config["metrics"] = [
-    "Recall",
-    "NDCG",
-    "GiniIndex",
-    "AveragePopularity",
-    "TailPercentage",
-    "ItemCoverage",
-    "Precision",
-    "MRR",
-    "Hit",
-]
+    Returns:
+        None
+    """
+    # Load models and dataset
+    models_bundle = {}
+    for model in SUPPORTED_MODELS:
+        models_bundle[model] = load_data_and_model(
+            model_file=model_registry[model]["model_path"],
+        )
 
-# Load CO2 score estimations (LLM)
-co2e_scores = get_co2e_kg_estimations(model_tag)
+    # Load emission data
+    emission_data = {
+        llm: {
+            d["parent_asin"]: d["co2e_kg"]
+            for d in load_jsonl(emission_data_paths[llm])
+            if d.get("co2e_kg") is not None
+        }
+        for llm in SUPPORTED_LLMS
+    }
 
-# Load item_index -> parent_asin mapping
-item_map_df = pd.read_csv(
-    "../2_recbole/process_data/maps/item_map.tsv", sep="\t",
-)
-id_to_asin = dict(zip(item_map_df["item_index"], item_map_df["parent_asin"]))
+    # Load (Item Index, Parent ASIN) mapping
+    item_map_df = pd.read_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t")
+    item_map = dict(
+        zip(
+            item_map_df["item_index"],
+            item_map_df["parent_asin"],
+        ),
+    )
 
-# For calculating item popularity
-train_item_ids = dataset.inter_feat[dataset.iid_field].numpy()
-item_cnt_array = np.zeros(dataset.item_num, dtype=np.int64)
-for iid in train_item_ids:
-    item_cnt_array[iid] += 1
-item_cnt = [(i, count) for i, count in enumerate(item_cnt_array)]
+    # Compute item popularity in the training set as raw interaction
+    # counts per item ID
+    dataset = models_bundle[next(iter(SUPPORTED_MODELS))][2]
+    train_item_ids = dataset.inter_feat[dataset.iid_field].numpy()
+    item_popularity = np.bincount(
+        train_item_ids,
+        minlength=dataset.item_num,
+    )
+    item_popularity = list(enumerate(item_popularity))
 
-# =============================================
-# RecSys — Evaluation
-# =============================================
-# For each RecSys model, for each alpha value,
-# and for each different k, evaluate the model
-# under RecBole and sustainability metrics
-all_final_results = []
-for model in models:
-    for alpha in alpha_values:
-        file_path = f"../3_reranking/results/{model}/{model_tag}/results_alpha_{alpha}.pth"
-        data = torch.load(file_path, weights_only=False)
-        for k_val in k_values:
-            res = evaluate_model_results(
-                data, k_val, config, dataset, id_to_asin, co2e_scores, item_cnt,
-            )
-            all_final_results.append(res)
+    results = []
+    with tqdm(
+        total=len(SUPPORTED_MODELS)
+        * len(SUPPORTED_LLMS)
+        * len(SUPPORTED_RERANKING_ALPHAS)
+        * len(config["recbole"]["topk"]),
+        desc="Evaluating recommendation models",
+    ) as pbar:
+        for model in SUPPORTED_MODELS:
+            for llm in SUPPORTED_LLMS:
+                for alpha in SUPPORTED_RERANKING_ALPHAS:
+                    # Load prediction data
+                    preds_path = model_registry[model]["preds_paths"][llm][
+                        alpha
+                    ]
+                    preds_data = torch.load(preds_path, weights_only=False)
 
-# Save results
-df_final = pd.DataFrame(all_final_results)
-df_final = df_final.sort_values(
-    ["MODEL", "K", "ALPHA"], ascending=[True, True, False],
-)
-df_final.to_csv(f"results/{model_tag}/results.csv", index=False)
+                    # Evaluate results for each top-k value
+                    for top_k in config["recbole"]["topk"]:
+                        res = _compute_evaluation_metrics(
+                            preds_data=preds_data,
+                            top_k=top_k,
+                            dataset=dataset,
+                            item_map=item_map,
+                            emission_data=emission_data,
+                            item_popularity=item_popularity,
+                            config=config["recbole"],
+                        )
+                        results.append(res)
+                        pbar.update(1)
 
-# Show results
-print("\n" + "=" * 150 + "\n RECSYS EVALUATION — RESULTS \n" + "=" * 150)
-print(df_final.to_string(index=False))
+
+if __name__ == "__main__":
+    evaluate_recsys()
