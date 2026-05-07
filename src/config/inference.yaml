@@ -1,5 +1,4 @@
 inference:
-
   # -------------------------------------------------------------------------------------
   # Description: Number of top recommendations to compute for each user
   # Type: int

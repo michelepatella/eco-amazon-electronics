@@ -241,8 +241,15 @@ recbole:
   metric_decimal_place: 4
 
   # ------------------------------------------------------------------------------------
-  # Description: Computing device for model training and inference
+  # Description: Computing device for model training
   # Type: str
   # Constraints: "cpu", "cuda", "mps"
   # ------------------------------------------------------------------------------------
   device: "cpu"
+
+  # ------------------------------------------------------------------------------------
+  # Description: Ratio of tail items to consider in TailPercentage metric calculation
+  # Type: float
+  # Constraints: 0.0 < tail_ratio < 1.0
+  # ------------------------------------------------------------------------------------
+  tail_ratio: 0.2
