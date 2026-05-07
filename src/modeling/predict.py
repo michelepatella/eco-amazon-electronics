@@ -106,6 +106,13 @@ if config["dataset"]["name"] == DATASET_NAME_ELEC:
         LLM_NAME_O3M: DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
     }
 
+# Ensure reproducibility by setting random seeds
+np.random.seed(config["inference"]["seed"])
+torch.manual_seed(config["inference"]["seed"])
+torch.cuda.manual_seed_all(config["inference"]["seed"])
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 
 def _compute_sas_scores(
     emission_data: dict,
