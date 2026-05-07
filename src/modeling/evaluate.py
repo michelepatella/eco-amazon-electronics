@@ -1,3 +1,8 @@
+"""src/modeling/evaluate.py
+
+Evaluate trained RecBole models.
+"""
+
 import numpy as np
 import pandas as pd
 import torch
@@ -95,6 +100,13 @@ if config["dataset"]["name"] == DATASET_NAME_ELEC:
         LLM_NAME_G25F: DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
         LLM_NAME_O3M: DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
     }
+
+# Ensure reproducibility by setting random seeds
+np.random.seed(config["evaluation"]["seed"])
+torch.manual_seed(config["evaluation"]["seed"])
+torch.cuda.manual_seed_all(config["evaluation"]["seed"])
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 
 def _compute_avg_emissions(
