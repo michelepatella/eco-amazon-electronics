@@ -389,7 +389,7 @@ def _rerank_top_k_recommendations(
     return pos_matrix, pos_len, reranked_item_ids
 
 
-def infer_recsys() -> None:
+def predict_recommendations() -> None:
     """Runs the full recommendation inference pipeline including:
     1. Loading trained recommendation models
     2. Loading emission data
@@ -483,4 +483,4 @@ def infer_recsys() -> None:
 
 
 if __name__ == "__main__":
-    infer_recsys()
+    predict_recommendations()
