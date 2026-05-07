@@ -72,10 +72,11 @@ np.long = int
 np.unicode = str
 ```
 
-### 2. `recbole/trainer/trainer.py`
+### 2. `recbole/trainer/trainer.py`, `recbole/quick_start/quick_start.py`
 
 > Fix for PyTorch checkpoint loading to ensure consistent model deserialization across CPU/GPU environments and compatibility with newer PyTorch versions.
 
+#### 2.1 `recbole/trainer/trainer.py`
 Replace:
 
 ```python
@@ -90,6 +91,19 @@ checkpoint = torch.load(
     map_location=self.device,
     weights_only=False
 )
+```
+
+#### 2.2 `recbole/quick_start/quick_start.py`
+Replace:
+
+```python
+checkpoint = torch.load(model_file)
+```
+
+With:
+
+```python
+checkpoint = torch.load(model_file, weights_only=False)
 ```
 
 ### 3. `recbole/model/general_recommender/lightgcn.py`
