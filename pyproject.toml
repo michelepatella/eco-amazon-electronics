@@ -2,7 +2,7 @@
 [project]
 name = "ecoamazon-electronics"
 version = "0.1.0"
-description = "Sustainable Amazon (electronics) product recommendations, balancing user preferences with environmental impact estimated by an agent for eco-friendly e-commerce."
+description = "Multi-objective recommender system for Amazon electronics, balancing user preferences with agent-derived carbon footprint information for sustainable e-commerce."
 readme = "README.md"
 requires-python = "==3.14.4"
 
