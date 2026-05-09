@@ -1,3 +1,8 @@
+# Building -------------------------------------------------------------------------------------------------------------
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
 # Project settings -----------------------------------------------------------------------------------------------------
 [project]
 name = "ecoamazon-electronics"
@@ -5,9 +10,6 @@ version = "0.1.0"
 description = "Multi-objective recommender system for Amazon electronics, balancing user preferences with agent-derived carbon footprint information for sustainable e-commerce."
 readme = "README.md"
 requires-python = "==3.14.4"
-
-[project.urls]
-"Source" = "https://github.com/michelepatella/EcoAmazon-Electronics"
 
 # Required dependencies ------------------------------------------------------------------------------------------------
 dependencies = [
@@ -31,6 +33,10 @@ dev = [
     "pre-commit==4.6.0",
     "ruff==0.15.12"
 ]
+
+# Other project settings -----------------------------------------------------------------------------------------------
+[project.urls]
+"Source" = "https://github.com/michelepatella/EcoAmazon-Electronics"
 
 # Tools settings -------------------------------------------------------------------------------------------------------
 [tool.ruff]
