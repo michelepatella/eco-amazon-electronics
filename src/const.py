@@ -96,6 +96,8 @@ SUPPORTED_RERANKING_ALPHAS = [
 # ============================================================================
 # TUNING
 # ============================================================================
+
+# Tuning validation metric
 TUNING_VAL_METRIC = {
     "name": "best_valid_score",
     "mode": "max",
@@ -223,3 +225,13 @@ MODELS_ELEC_LIGHTGCN_PREDS_O3M_PURE_PATH = f"{MODELS_ELEC_LIGHTGCN_PREDS_O3M_DIR
 
 # Config directory
 CONFIG_DIR = f"{SRC_DIR}/config"
+
+# ============================================================================
+# FILE FORMATS
+# ============================================================================
+
+# Configuration files
+CONFIG_FILE_FORMAT = "*.yaml"
+
+# Model checkpoint files
+MODEL_CHECKPOINT_FILE_FORMAT = "*.pth"

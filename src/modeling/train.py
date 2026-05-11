@@ -17,6 +17,7 @@ from recbole.quick_start import run_recbole
 from src.const import (
     DATA_PROCESSED_AR23_UR_DIR,
     DATASET_NAME_ELEC,
+    MODEL_CHECKPOINT_FILE_FORMAT,
     MODEL_NAME_BPR,
     MODEL_NAME_LIGHTGCN,
     MODEL_SUPPORTED_PARAMS,
@@ -259,7 +260,9 @@ def train_recsys() -> None:
 
         # Rename the checkpoint file to the final model path
         ckpt = max(
-            glob.glob(os.path.join(checkpoint_dir, "*.pth")),
+            glob.glob(
+                os.path.join(checkpoint_dir, MODEL_CHECKPOINT_FILE_FORMAT),
+            ),
             key=os.path.getctime,
         )
         target_path = os.path.abspath(model_registry[model]["model_path"])

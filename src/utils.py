@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from src.const import CONFIG_DIR
+from src.const import CONFIG_DIR, CONFIG_FILE_FORMAT
 
 
 def load_config() -> dict:
@@ -25,7 +25,7 @@ def load_config() -> dict:
     config = {}
 
     # Iterate over all YAML config files in deterministic order
-    for f in sorted(Path(CONFIG_DIR).glob("*.yaml")):
+    for f in sorted(Path(CONFIG_DIR).glob(CONFIG_FILE_FORMAT)):
         with open(f, encoding="utf-8") as file:
             data = yaml.safe_load(file) or {}
 
