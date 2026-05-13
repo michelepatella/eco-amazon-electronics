@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 # Project settings -----------------------------------------------------------------------------------------------------
 [project]
-name = "ecoamazon-electronics"
+name = "eco-amazon-electronics"
 version = "0.1.0"
 description = "Multi-objective recommender system for Amazon electronics, balancing user preferences with agent-derived carbon footprint information for sustainable e-commerce."
 readme = "README.md"
@@ -36,7 +36,7 @@ dev = [
 
 # Other project settings -----------------------------------------------------------------------------------------------
 [project.urls]
-"Source" = "https://github.com/michelepatella/EcoAmazon-Electronics"
+"Source" = "https://github.com/michelepatella/eco-amazon-electronics"
 
 # Tools settings -------------------------------------------------------------------------------------------------------
 [tool.ruff]

@@ -2,4 +2,4 @@
     remote = origin
 ['remote "origin"']
     url = s3://dvc
-    endpointurl = https://dagshub.com/michelepatella/EcoAmazon-Electronics.s3
+    endpointurl = https://dagshub.com/michelepatella/eco-amazon-electronics.s3
