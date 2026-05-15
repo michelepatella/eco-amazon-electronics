@@ -416,8 +416,8 @@ async def calculate_and_display_metrics(products: list) -> None:
 
     for product_data in products:
         # Only include in metrics if agent returned a valid value
-        true_co2e = product_data.get("co2e_kg")
-        co2e_kg_estimates = product_data.get("co2e_kg_estimates", [])
+        true_co2e = product_data["co2e_kg"]
+        co2e_kg_estimates = product_data["co2e_kg_estimates"]
 
         if true_co2e is not None and co2e_kg_estimates:
             true_values.append(true_co2e)
@@ -611,52 +611,94 @@ async def enrich_data_with_emissions() -> None:
     )
 
     # Process products
-    tasks = [
-        _process_single_product(
-            product_data=product_data,
-            context=Context(
-                model=config["emissions_enrichment"]["model"],
-                model_temperature=config["emissions_enrichment"][
-                    "model_temperature"
-                ],
-                search_web_max_results=config["emissions_enrichment"][
-                    "search_web_max_results"
-                ],
-                search_web_type=config["emissions_enrichment"][
-                    "search_web_type"
-                ],
-                search_web_max_calls=config["emissions_enrichment"][
-                    "search_web_max_calls"
-                ],
-                enable_logging=config["emissions_enrichment"][
-                    "enable_logging"
-                ],
-                logs_dir=config["emissions_enrichment"]["logs_dir"],
-                logs_path=f"{product_data['title'].replace(' ', '_')}.log",
-            ),
-            semaphore=semaphore,
-            is_ground_truth=config["emissions_enrichment"]["is_ground_truth"],
-        )
-        for _, product_data in products_to_process
-    ]
+    tasks = []
+    task_to_product_idx = {}
+
+    for idx, product_data in products_to_process:
+        # Calculate how many runs are needed for this product
+        # based on whether we are processing ground truth data
+        # or not and how many valid estimates it already has
+        # (in case of ground truth data)
+        if config["emissions_enrichment"]["is_ground_truth"]:
+            valid_estimates = [
+                x for x in product_data["co2e_kg_estimates"] if x is not None
+            ]
+            runs_needed = config["emissions_enrichment"][
+                "num_estimates_per_product"
+            ] - len(valid_estimates)
+        else:
+            runs_needed = 1
+
+        # Generate the required number of tasks for this product based on
+        # the runs needed
+        for _ in range(runs_needed):
+            task = asyncio.create_task(
+                _process_single_product(
+                    product_data=product_data,
+                    context=Context(
+                        model=config["emissions_enrichment"]["model"],
+                        model_temperature=config["emissions_enrichment"][
+                            "model_temperature"
+                        ],
+                        search_web_max_results=config["emissions_enrichment"][
+                            "search_web_max_results"
+                        ],
+                        search_web_type=config["emissions_enrichment"][
+                            "search_web_type"
+                        ],
+                        search_web_max_calls=config["emissions_enrichment"][
+                            "search_web_max_calls"
+                        ],
+                        enable_logging=config["emissions_enrichment"][
+                            "enable_logging"
+                        ],
+                        logs_dir=config["emissions_enrichment"]["logs_dir"],
+                        logs_path=f"{product_data['title'].replace(' ', '_')}.log",
+                    ),
+                    semaphore=semaphore,
+                    is_ground_truth=config["emissions_enrichment"][
+                        "is_ground_truth"
+                    ],
+                ),
+            )
+            tasks.append(task)
+            task_to_product_idx[task] = idx
+
+    if not tasks:
+        return
 
     # Use tqdm to display progress bar while processing products
-    results = await tqdm.gather(
-        *tasks,
+    processed_tasks = set()
+    with tqdm(
         total=len(tasks),
         desc="Enriching products with emission data...",
-    )
+    ) as pbar:
+        # Iterate over tasks as they complete and update products data accordingly
+        for next_to_complete in asyncio.as_completed(tasks):
+            try:
+                # Get the result of the completed task, which is the updated product data
+                updated_product_data, _ = await next_to_complete
 
-    # Update products data with emission estimates
-    for (idx, _), (updated_product_data, _) in zip(
-        products_to_process,
-        results,
-    ):
-        products[idx] = updated_product_data
+                # Find the index of the product corresponding to the completed task
+                finished_task = next(
+                    t for t in tasks if t.done() and t not in processed_tasks
+                )
+                processed_tasks.add(finished_task)
+                idx = task_to_product_idx[finished_task]
 
-    # Write updated products data back to processed JSONL file
-    with open(processed_jsonl_file, "w") as f:
-        f.writelines(json.dumps(product) + "\n" for product in products)
+                # Update products data with emission estimates
+                products[idx] = updated_product_data
+
+                # Write updated products data back to processed JSONL file
+                with open(processed_jsonl_file, "w") as f:
+                    f.writelines(
+                        json.dumps(product) + "\n" for product in products
+                    )
+
+            except Exception as e:
+                print(f"\nError processing a single product run: {e}")
+            finally:
+                pbar.update(1)
 
     if config["emissions_enrichment"]["is_ground_truth"]:
         # Calculate and display metrics

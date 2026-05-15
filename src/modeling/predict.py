@@ -414,7 +414,7 @@ def predict_recommendations() -> None:
         llm: {
             d["parent_asin"]: d["co2e_kg"]["value"]
             for d in load_jsonl(emission_data_paths[llm])
-            if d.get("co2e_kg") and d["co2e_kg"].get("value") is not None
+            if d["co2e_kg"] and d["co2e_kg"]["value"] is not None
         }
         for llm in SUPPORTED_LLMS
     }
