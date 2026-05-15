@@ -69,8 +69,8 @@ MODEL_SUPPORTED_PARAMS = {
 }
 
 # LLM names
-LLM_NAME_G25F = "gemini_2_5_flash"
-LLM_NAME_O3M = "openai_o3_mini"
+LLM_NAME_G25F = "google_genai:gemini-2.5-flash"
+LLM_NAME_O3M = "openai:o3-mini"
 
 # Supported LLMs
 SUPPORTED_LLMS = [LLM_NAME_G25F, LLM_NAME_O3M]
