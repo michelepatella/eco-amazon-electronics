@@ -23,7 +23,8 @@ dependencies = [
     "ray[tune]==2.55.1",
     "recbole==1.2.0",
     "torch==2.11.0",
-    "tqdm==4.67.3"
+    "tqdm==4.67.3",
+    "git+https://github.com/michelepatella/reco2gnizer"
 ]
 
 # Optional dependencies ------------------------------------------------------------------------------------------------
