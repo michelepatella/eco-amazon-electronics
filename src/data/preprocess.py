@@ -1,6 +1,6 @@
 """src/data/preprocess.py
 
-Data preprocessing module.
+Preprocess data.
 """
 
 import pandas as pd
