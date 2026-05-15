@@ -22,6 +22,13 @@ emissions_enrichment:
   is_ground_truth: true
 
   # -------------------------------------------------------------------------------------
+  # Description: Whether to compare the current estimates with baseline estimates.
+  # Type: bool
+  # Constraints: True or False
+  # -------------------------------------------------------------------------------------
+  compare_with_baseline: true
+
+  # -------------------------------------------------------------------------------------
   # Description: The LLM to use for enrichment process.
   # Type: str
   # Constraints: <provider_name>:<model_name>
@@ -31,7 +38,7 @@ emissions_enrichment:
   # -------------------------------------------------------------------------------------
   # Description: The temperature setting for the LLM during enrichment.
   # Type: float
-  # Constraints: 0.0 <= temperature <= 1.0
+  # Constraints: >= 0.0 and <= 1.0
   # -------------------------------------------------------------------------------------
   model_temperature: 0.0
 
