@@ -260,23 +260,20 @@ def _split_user_reviews(
     user_reviews: pd.DataFrame,
     train_ratio: float,
     valid_ratio: float,
-    seed: int,
 ) -> None:
-    """Split user reviews by temporal order and shuffle training set.
+    """Split user reviews by temporal order.
 
     Performs a user-aware temporal split, ensuring that for each individual
     user, older interactions are allocated to train, more recent to validation,
     and the most recent to test. This approach prevents temporal leakage and
-    creates a more realistic evaluation scenario. The training set is then
-    shuffled for robustness while validation and test sets preserve temporal
-    order to ensure realistic evaluation conditions. Additionally, the function
+    creates a more realistic evaluation scenario. Additionally, the function
     ensures that validation and test sets contain only items present in the
     training set, preventing cold-start problems during model evaluation.
 
     For each user, interactions are ordered by timestamp and split as:
-    - Train: oldest interactions (then shuffled)
-    - Validation: more recent interactions (temporal order preserved)
-    - Test: most recent interactions (temporal order preserved)
+    - Train: oldest interaction
+    - Validation: more recent interactions
+    - Test: most recent interactions
 
     Args:
         user_reviews (pd.DataFrame):
@@ -291,9 +288,6 @@ def _split_user_reviews(
 
         valid_ratio (float):
             Proportion of data for validation set.
-
-        seed (int):
-            Random seed for shuffling training set.
 
     Returns:
         None
@@ -335,13 +329,6 @@ def _split_user_reviews(
     train_df = pd.concat(train_splits, ignore_index=True)
     valid_df = pd.concat(valid_splits, ignore_index=True)
     test_df = pd.concat(test_splits, ignore_index=True)
-
-    # Shuffle training set for robustness using configured seed for full
-    # reproducibility. Valid and test sets preserve temporal order to ensure
-    # realistic evaluation (model predicts future, not random past)
-    train_df = train_df.sample(frac=1.0, random_state=seed).reset_index(
-        drop=True,
-    )
 
     # Filter validation and test to contain only items present in training set,
     # preventing cold-start problems where model evaluates on unseen items
@@ -410,7 +397,7 @@ def preprocess_data() -> None:
     steps.update(1)
 
     # Binarize ratings using positive threshold, creating implicit feedback
-    # matrix suitable for recommendation models, then shuffle for robustness
+    # matrix suitable for recommendation models
     steps.set_description("Binarizing user-item interactions")
     binarized_user_reviews = _binarize_user_reviews(
         user_reviews,
@@ -427,7 +414,6 @@ def preprocess_data() -> None:
         binarized_user_reviews,
         train_ratio=config["preprocessing"]["train_ratio"],
         valid_ratio=config["preprocessing"]["valid_ratio"],
-        seed=config["preprocessing"]["seed"],
     )
     steps.update(1)
     steps.set_description("Data preprocessing completed")
