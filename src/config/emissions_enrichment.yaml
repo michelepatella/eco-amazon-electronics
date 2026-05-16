@@ -75,4 +75,4 @@ emissions_enrichment:
   # Type: str
   # Constraints: Valid directory path
   # -------------------------------------------------------------------------------------
-  logs_dir: "logs/ground_truth"
+  logs_dir: "logs/ground_truth/google_genai:gemini-2.5-flash"
