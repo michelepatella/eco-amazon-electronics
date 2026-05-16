@@ -13,7 +13,7 @@ dvc pull
 |------|--------|--------|------|------|--------|-------------|
 | `amazon_reviews_23/item_metadata/electronics.jsonl` | JSONL | Amazon Reviews'23 | 48.2 MB | 9,710 | `main_category`, `title`, `average_rating`, `rating_number`, `features`, `description`, `price`, `images`, `videos`, `store`, `categories`, `details`, `parent_asin`, `bought_together` | Item metadata (15-core filtered) |
 | `amazon_reviews_23/user_reviews/electronics.jsonl` | JSONL | Amazon Reviews'23 | 262.4 MB | 464,464 | `rating`, `title`, `text`, `images`, `asin`, `parent_asin`, `user_id`, `timestamp`, `helpful_vote`, `verified_purchase` | User reviews (15-core filtered) |
-| `ground_truths/electronics.jsonl` | JSONL | Manually collected | 16 KB | 200 | `title`, `co2e_kg`, (Optional) `co2e_kg_baseline_gemini_2_5_flash_estimates`, (Optional) `co2e_kg_baseline_openai_o3_mini_estimates` | Items with known PCF values |
+| `ground_truths/electronics.jsonl` | JSONL | Manually collected | 16 KB | 200 | `title`, `co2e_kg` | Items with known PCF values |
 
 ## `interim/`
 
@@ -32,5 +32,5 @@ dvc pull
 | `amazon_reviews_23/user_reviews/electronics/electronics.train.inter` | TSV | Generated | 11.8 MB | 363,022 | `user_id:token`, `item_id:token`, `rating:float`, `timestamp:float` | Training split in RecBole format |
 | `amazon_reviews_23/user_reviews/electronics/electronics.valid.inter` | TSV | Generated | 1.1 MB | 35,117 | `user_id:token`, `item_id:token`, `rating:float`, `timestamp:float` | Validation split in RecBole format |
 | `amazon_reviews_23/user_reviews/electronics/electronics.test.inter` | TSV | Generated | 2.2 MB | 65,862 | `user_id:token`, `item_id:token`, `rating:float`, `timestamp:float` | Test split in RecBole format |
-| `ground_truths/google_genai:gemini-2.5-flash/electronics.jsonl` | JSONL | Gemini 2.5 Flash enrichment | - | 200 | `title`, `co2e_kg`, (Optional) `co2e_kg_baseline_gemini_2_5_flash_estimates`, (Optional) `co2e_kg_baseline_openai_o3_mini_estimates`, `co2e_kg_estimates` | Items with known PCF values enriched with Gemini 2.5 Flash estimates |
-| `ground_truths/openai:o3-mini/electronics.jsonl` | JSONL | OpenAI o3-mini enrichment | - | 200 | `title`, `co2e_kg`, (Optional) `co2e_kg_baseline_gemini_2_5_flash_estimates`, (Optional) `co2e_kg_baseline_openai_o3_mini_estimates`, `co2e_kg_estimates` | Items with known PCF values enriched with OpenAI o3-mini estimates |
+| `ground_truths/google_genai:gemini-2.5-flash/electronics.jsonl` | JSONL | Gemini 2.5 Flash enrichment | - | 200 | `title`, `co2e_kg` | Items with known PCF values enriched with Gemini 2.5 Flash estimates |
+| `ground_truths/openai:o3-mini/electronics.jsonl` | JSONL | OpenAI o3-mini enrichment | - | 200 | `title`, `co2e_kg` | Items with known PCF values enriched with OpenAI o3-mini estimates |
