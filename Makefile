@@ -4,19 +4,22 @@ conda_env = eco-amazon-electronics
 # DATA PREPROCESSING
 # ===================================
 preprocess_data:
-	conda run --no-capture-output -n $(conda_env) python -u -m src.data.preprocess
+	mkdir -p pipeline_logs
+	conda run --no-capture-output -n $(conda_env) python -u -m src.data.preprocess 2>&1 | tee -a pipeline_logs/preprocess_data.log
 
 # ===================================
 # EMISSION DATA ENRICHMENT
 # ===================================
 enrich_data_with_emissions:
-	conda run --no-capture-output -n $(conda_env) python -u -m src.data.enrich_with_emissions
+	mkdir -p pipeline_logs
+	conda run --no-capture-output -n $(conda_env) python -u -m src.data.enrich_with_emissions 2>&1 | tee -a pipeline_logs/enrich_data_with_emissions.log
 
 # ===================================
 # MODEL TRAINING
 # ===================================
 train_recsys:
-	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.train
+	mkdir -p pipeline_logs
+	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.train 2>&1 | tee -a pipeline_logs/train_recsys.log
 
 # ===================================
 # MODEL INFERENCE
@@ -25,10 +28,12 @@ train_recsys:
 # RE-RANKING
 # ===================================
 predict_recommendations:
-	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.predict
+	mkdir -p pipeline_logs
+	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.predict 2>&1 | tee -a pipeline_logs/predict_recommendations.log
 
 # ===================================
 # MODEL EVALUATION
 # ===================================
 evaluate_recsys:
-	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.evaluate
+	mkdir -p pipeline_logs
+	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.evaluate 2>&1 | tee -a pipeline_logs/evaluate_recsys.log
