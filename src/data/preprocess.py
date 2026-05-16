@@ -341,6 +341,9 @@ def _split_user_reviews(
     ]
 
     # Save all splits in RecBole format
+    print(
+        f"Split sizes: train={len(train_df)}, valid={len(valid_df)}, test={len(test_df)}",
+    )
     train_df.to_csv(processed_user_reviews_train_path, sep="\t", index=False)
     valid_df.to_csv(processed_user_reviews_valid_path, sep="\t", index=False)
     test_df.to_csv(processed_user_reviews_test_path, sep="\t", index=False)
@@ -374,6 +377,9 @@ def preprocess_data() -> None:
         None
     """
     steps = tqdm(total=5)
+    print(
+        f"Preprocess start: dataset={dataset_name}, raw_path={raw_user_reviews_path}",
+    )
 
     # Load raw user reviews and sort chronologically by user and timestamp
     # to maintain temporal order of interactions for each user
@@ -381,20 +387,30 @@ def preprocess_data() -> None:
     user_reviews = pd.read_json(raw_user_reviews_path, lines=True).sort_values(
         by=[DATASET_RAW_UR_USER_ID_COL, DATASET_RAW_UR_TIMESTAMP_COL],
     )
+    print(
+        f"Loaded {len(user_reviews)} rows — users={user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()}, items={user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()}",
+    )
     steps.update(1)
 
     # Remove duplicate user-item interactions, keeping the most recent rating
     steps.set_description("Deduplicating user-item interactions")
+    n_before = len(user_reviews)
     user_reviews = _deduplicate_user_reviews(
         user_reviews,
         keep=config["preprocessing"]["deduplication_keep"],
     )
     steps.update(1)
+    print(
+        f"Deduplicated: {n_before} -> {len(user_reviews)} (removed {n_before - len(user_reviews)})",
+    )
 
     # Create and persist user/item ID to index mappings
     steps.set_description("Building user/item maps")
     map_users, map_items = _build_user_item_maps(user_reviews)
     steps.update(1)
+    print(
+        f"Maps built: users={len(map_users)}, items={len(map_items)} — saved to {DATA_INTERIM_MAPS_UMAP_PATH} / {DATA_INTERIM_MAPS_IMAP_PATH}",
+    )
 
     # Binarize ratings using positive threshold, creating implicit feedback
     # matrix suitable for recommendation models
@@ -406,6 +422,9 @@ def preprocess_data() -> None:
         threshold=config["preprocessing"]["bin_rating_threshold"],
     )
     steps.update(1)
+    print(
+        f"Binarized interactions: total={len(binarized_user_reviews)}, positives={binarized_user_reviews[DATASET_PROCESSED_UR_RATING_COL].sum()}",
+    )
 
     # Split binarized interactions into train/valid/test sets and persist
     # each split separately for downstream model training and evaluation
