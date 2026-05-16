@@ -788,14 +788,15 @@ async def enrich_data_with_emissions() -> None:
                 pbar.update(1)
 
     # Sort final products by 'co2e_kg' in descending order before saving
-    products.sort(
-        key=lambda x: (
-            x["co2e_kg"]["true_value"]
-            if x["co2e_kg"]["true_value"] is not None
-            else float("-inf")
-        ),
-        reverse=True,
-    )
+    if config["emissions_enrichment"]["is_ground_truth"]:
+        products.sort(
+            key=lambda x: (
+                x["co2e_kg"]["true_value"]
+                if x["co2e_kg"]["true_value"] is not None
+                else float("-inf")
+            ),
+            reverse=True,
+        )
 
     # Write fully updated and sorted products data back to processed JSONL file
     with open(processed_jsonl_file, "w") as f:
