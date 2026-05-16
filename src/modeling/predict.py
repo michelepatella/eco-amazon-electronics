@@ -4,6 +4,7 @@ Predict with trained RecBole models and apply sustainability-aware re-ranking.
 """
 
 import math
+import os
 from collections import defaultdict
 
 import numpy as np
@@ -502,6 +503,62 @@ def predict_recommendations() -> None:
                 print(
                     f"Saved predictions: {model_registry[model]['preds_paths'][llm][alpha]}",
                 )
+
+    # Print summary of saved predictions
+    print("\n" + "=" * 160)
+    print("Prediction Summary")
+    print("=" * 160)
+
+    summary_data = []
+    total_predictions = 0
+
+    for model in SUPPORTED_MODELS:
+        for llm in SUPPORTED_LLMS:
+            for alpha in SUPPORTED_RERANKING_ALPHAS:
+                pred_path = model_registry[model]["preds_paths"][llm][alpha]
+
+                # Check if file exists and get size
+                if os.path.exists(pred_path):
+                    file_size_mb = os.path.getsize(pred_path) / (1024 * 1024)
+                    # Load to get statistics
+                    try:
+                        pred_data = torch.load(pred_path, weights_only=False)
+                        n_users = len(pred_data.get("reranked_item_ids", []))
+                        n_items_per_user = (
+                            len(pred_data.get("reranked_item_ids", [[]])[0])
+                            if n_users > 0
+                            else 0
+                        )
+                        total_predictions += n_users * n_items_per_user
+                    except Exception:
+                        n_users = "Error"
+                        n_items_per_user = "Error"
+                else:
+                    file_size_mb = 0.0
+                    n_users = "Missing"
+                    n_items_per_user = "Missing"
+
+                summary_data.append(
+                    {
+                        "Model": model,
+                        "LLM": llm,
+                        "Alpha": alpha,
+                        "Num Users": n_users,
+                        "Items Per User": n_items_per_user,
+                        "File Size (MB)": f"{file_size_mb:.2f}",
+                        "Path": pred_path,
+                    },
+                )
+
+    summary_df = pd.DataFrame(summary_data)
+    print(summary_df.to_string(index=False))
+
+    print("\n" + "=" * 160)
+    print(f"Total prediction entries generated: {total_predictions}")
+    print(
+        f"Total configurations saved: {len(SUPPORTED_MODELS) * len(SUPPORTED_LLMS) * len(SUPPORTED_RERANKING_ALPHAS)}",
+    )
+    print("=" * 160 + "\n")
 
 
 if __name__ == "__main__":

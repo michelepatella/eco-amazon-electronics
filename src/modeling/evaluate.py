@@ -404,7 +404,7 @@ def evaluate_recsys() -> None:
             # Create pivot table: alpha on rows, metrics on columns
             data_for_table = []
             for alpha in alphas:
-                row = {"α": alpha}
+                row = {"Alpha": alpha}
                 alpha_df = top_k_df[top_k_df["ALPHA"] == alpha]
                 for metric in metrics:
                     if not alpha_df.empty:
