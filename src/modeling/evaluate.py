@@ -292,11 +292,15 @@ def evaluate_recsys() -> None:
         None
     """
     # Load models and dataset
+    print(
+        f"Evaluation start: models={SUPPORTED_MODELS}, llms={SUPPORTED_LLMS}, alphas={SUPPORTED_RERANKING_ALPHAS}, topks={config['recbole']['topk']}",
+    )
     models_bundle = {}
     for model in SUPPORTED_MODELS:
         models_bundle[model] = load_data_and_model(
             model_file=model_registry[model]["model_path"],
         )
+    print(f"Loaded {len(SUPPORTED_MODELS)} models")
 
     # Load emission data
     emission_data = {
@@ -307,6 +311,10 @@ def evaluate_recsys() -> None:
         }
         for llm in SUPPORTED_LLMS
     }
+    for llm in SUPPORTED_LLMS:
+        print(
+            f"Emission data loaded for {llm}: {len(emission_data[llm])} items",
+        )
 
     # Load (Item Index, Parent ASIN) mapping
     item_map_df = pd.read_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t")
@@ -316,6 +324,7 @@ def evaluate_recsys() -> None:
             item_map_df["parent_asin"],
         ),
     )
+    print(f"Item map loaded: {len(item_map)} entries")
 
     # Compute item popularity in the training set as raw interaction
     # counts per item ID
@@ -326,6 +335,7 @@ def evaluate_recsys() -> None:
         minlength=dataset.item_num,
     )
     item_popularity = list(enumerate(item_popularity))
+    print(f"Item popularity computed: {len(item_popularity)} items")
 
     results = []
     with tqdm(
@@ -342,7 +352,11 @@ def evaluate_recsys() -> None:
                     preds_path = model_registry[model]["preds_paths"][llm][
                         alpha
                     ]
+                    print(
+                        f"Evaluating: model={model}, llm={llm}, alpha={alpha}",
+                    )
                     preds_data = torch.load(preds_path, weights_only=False)
+                    print(f"  Loaded predictions from {preds_path}")
 
                     # Evaluate results for each top-k value
                     for top_k in config["recbole"]["topk"]:
@@ -357,6 +371,53 @@ def evaluate_recsys() -> None:
                         )
                         results.append(res)
                         pbar.update(1)
+    print(f"Evaluation complete: {len(results)} result(s) computed")
+
+    # Display results
+    print("\n" + "=" * 140)
+    print("Evaluation Results")
+    print("=" * 140)
+
+    results_df = pd.DataFrame(results)
+    for col in results_df.select_dtypes(include=["float64"]).columns:
+        results_df[col] = results_df[col].round(6)
+
+    # Get all numeric columns excluding MODEL, ALPHA, TOP-K
+    all_cols = set(results_df.columns)
+    exclude_cols = {"MODEL", "ALPHA", "TOP-K"}
+    metrics = sorted([col for col in all_cols if col not in exclude_cols])
+    top_k_values = sorted(results_df["TOP-K"].unique())
+    alphas = sorted(results_df["ALPHA"].unique())
+
+    # Display one table per model
+    for model in SUPPORTED_MODELS:
+        model_df = results_df[results_df["MODEL"] == model].copy()
+        print(f"\n{'=' * 140}")
+        print(f"Model: {model}")
+        print(f"{'=' * 140}")
+
+        for top_k in top_k_values:
+            top_k_df = model_df[model_df["TOP-K"] == top_k].copy()
+            print(f"\nTop-K: {top_k}")
+            print("-" * 140)
+
+            # Create pivot table: alpha on rows, metrics on columns
+            data_for_table = []
+            for alpha in alphas:
+                row = {"α": alpha}
+                alpha_df = top_k_df[top_k_df["ALPHA"] == alpha]
+                for metric in metrics:
+                    if not alpha_df.empty:
+                        value = alpha_df[metric].values[0]
+                        row[metric] = f"{value:.4f}"
+                    else:
+                        row[metric] = "N/A"
+                data_for_table.append(row)
+
+            table_df = pd.DataFrame(data_for_table)
+            print(table_df.to_string(index=False))
+
+    print("\n" + "=" * 140 + "\n")
 
 
 if __name__ == "__main__":
