@@ -28,7 +28,7 @@ from src.const import (
     LLM_NAME_O3M,
     SUPPORTED_DATASETS,
 )
-from utils import load_config, load_jsonl
+from src.utils import load_config, load_jsonl
 
 # Load configuration
 config = load_config()
@@ -78,7 +78,7 @@ raw_jsonl_file = paths["raw_path"]
 processed_jsonl_file = paths["processed_path"]
 
 baseline_key_map = {
-    LLM_NAME_G25F: "co2e_kg_baseline_gemini_2-5_flash_estimates",
+    LLM_NAME_G25F: "co2e_kg_baseline_gemini_2_5_flash_estimates",
     LLM_NAME_O3M: "co2e_kg_baseline_openai_o3_mini_estimates",
 }
 baseline_estimates_key = baseline_key_map[model]
@@ -640,7 +640,9 @@ async def enrich_data_with_emissions() -> None:
         # (in case of ground truth data)
         if config["emissions_enrichment"]["is_ground_truth"]:
             valid_estimates = [
-                x for x in product_data["co2e_kg_estimates"] if x is not None
+                x
+                for x in product_data.get("co2e_kg_estimates", [])
+                if x is not None
             ]
             runs_needed = config["emissions_enrichment"][
                 "num_estimates_per_product"
