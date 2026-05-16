@@ -266,13 +266,33 @@ def _calculate_metric_values(
         dict[str, float]:
             Dictionary containing all computed metric values.
     """
-    mae = mean_absolute_error(y_true, y_pred)
-    me = _calculate_me(y_true, y_pred)
-    rmse = _calculate_rmse(y_true, y_pred)
-    mape = _calculate_mape(y_true, y_pred)
-    wape = _calculate_wape(y_true, y_pred)
-    ndcg = _calculate_ndcg(y_true, y_pred)
-    spearman_corr, _ = spearmanr(y_true, y_pred)
+    # Mask to filter out pairs where either true or predicted value is NaN
+    mask = ~np.isnan(y_true) & ~np.isnan(y_pred)
+    y_true_filtered = y_true[mask]
+    y_pred_filtered = y_pred[mask]
+
+    if len(y_true_filtered) == 0:
+        return dict.fromkeys(
+            [
+                "MAE",
+                "ME",
+                "RMSE",
+                "MAPE",
+                "WAPE",
+                "NDCG",
+                "Spearman",
+                "RMSE/MAE",
+            ],
+            0.0,
+        )
+
+    mae = mean_absolute_error(y_true_filtered, y_pred_filtered)
+    me = _calculate_me(y_true_filtered, y_pred_filtered)
+    rmse = _calculate_rmse(y_true_filtered, y_pred_filtered)
+    mape = _calculate_mape(y_true_filtered, y_pred_filtered)
+    wape = _calculate_wape(y_true_filtered, y_pred_filtered)
+    ndcg = _calculate_ndcg(y_true_filtered, y_pred_filtered)
+    spearman_corr, _ = spearmanr(y_true_filtered, y_pred_filtered)
     rmse_to_mae_ratio = _calculate_rmse_to_mae_ratio(rmse, mae)
 
     return {
@@ -388,11 +408,13 @@ async def _calculate_metrics(
     # estimates from products data
     current_preds_matrix = np.full((num_products, num_calls), np.nan)
     for row_idx, product_data in enumerate(products):
-        current_estimates = product_data["system_estimates"]
+        current_estimates = product_data.get("system_estimates", [])
         for col_idx in range(min(len(current_estimates), num_calls)):
-            if current_estimates[col_idx] is not None:
-                current_preds_matrix[row_idx, col_idx] = float(
-                    current_estimates[col_idx],
+            est = current_estimates[col_idx]
+            if est is not None:
+                val = est.get("value") if isinstance(est, dict) else est
+                current_preds_matrix[row_idx, col_idx] = (
+                    float(val) if val is not None else np.nan
                 )
 
     # Calculate current column-wise metrics (across products for each call)
@@ -436,7 +458,7 @@ async def _calculate_metrics(
         baseline_preds_matrix = np.full((num_products, num_calls), np.nan)
         for row_idx, product_data in enumerate(products):
             baseline_estimates = product_data["co2e_kg"]["baseline_estimates"][
-                model
+                baseline_key_map[model]
             ]
             baseline_preds_matrix[row_idx, : len(baseline_estimates)] = [
                 float(x) if x is not None else np.nan
@@ -561,16 +583,13 @@ async def enrich_data_with_emissions() -> None:
 
         # Check if emissions are already computed for this product
         if config["emissions_enrichment"]["is_ground_truth"]:
-            if (
-                "co2e_kg" in product_data
-                and "system_estimates" in product_data["co2e_kg"]
-            ):
-                # Filter out None values from estimates
+            if "system_estimates" in product_data:
                 valid_estimates = [
-                    x
-                    for x in product_data["co2e_kg"]["system_estimates"]
-                    if x is not None
+                    (x.get("value") if isinstance(x, dict) else x)
+                    for x in product_data["system_estimates"]
                 ]
+                valid_estimates = [v for v in valid_estimates if v is not None]
+
                 if (
                     len(valid_estimates)
                     < config["emissions_enrichment"][
@@ -590,8 +609,6 @@ async def enrich_data_with_emissions() -> None:
         else:
             # This product does not have any emission data
             products_to_process.append((idx, product_data))
-
-    num_initial_products = len(products)
 
     # If all products already have the required emission data and
     # we are processing ground truth data, skip processing and directly
@@ -645,14 +662,13 @@ async def enrich_data_with_emissions() -> None:
         # or not and how many valid estimates it already has
         # (in case of ground truth data)
         if config["emissions_enrichment"]["is_ground_truth"]:
+            raw_estimates = product_data.get("system_estimates", [])
             valid_estimates = [
-                x
-                for x in product_data.get("co2e_kg", {}).get(
-                    "system_estimates",
-                    [],
-                )
-                if x is not None
+                (x.get("value") if isinstance(x, dict) else x)
+                for x in raw_estimates
             ]
+            valid_estimates = [v for v in valid_estimates if v is not None]
+
             runs_needed = config["emissions_enrichment"][
                 "num_estimates_per_product"
             ] - len(valid_estimates)
