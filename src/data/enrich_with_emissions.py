@@ -77,6 +77,12 @@ paths = path_registry[data_type][model]
 raw_jsonl_file = paths["raw_path"]
 processed_jsonl_file = paths["processed_path"]
 
+baseline_key_map = {
+    LLM_NAME_G25F: "co2e_kg_baseline_gemini_2-5_flash_estimates",
+    LLM_NAME_O3M: "co2e_kg_baseline_openai_o3_mini_estimates",
+}
+baseline_estimates_key = baseline_key_map[model]
+
 
 def _calculate_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """Calculate Root Mean Squared Error (RMSE).
@@ -204,55 +210,6 @@ def _calculate_ndcg(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return dcg / idcg if idcg > 0 else 0.0
 
 
-def _calculate_std_dev(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Calculate the standard deviation of residuals.
-
-    This function computes the standard deviation of the residuals (errors),
-    representing the volatility and consistency of the model's predictions.
-
-    Args:
-        y_true (np.ndarray):
-            True values.
-
-        y_pred (np.ndarray):
-            Predicted values.
-
-    Returns:
-        float:
-            Standard deviation of residuals in the same unit as the input data.
-    """
-    residuals = y_true - y_pred
-    return float(np.std(residuals))
-
-
-def _calculate_cv(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Calculate the Coefficient of Variation (CV) of errors.
-
-    This function computes the CV of the errors by dividing the standard
-    deviation of residuals by the Mean Absolute Error (MAE). It expresses the
-    relative variability of the model's error.
-
-    Args:
-        y_true (np.ndarray):
-            True values.
-
-        y_pred (np.ndarray):
-            Predicted values.
-
-    Returns:
-        float:
-            CV value as a percentage (%).
-    """
-    residuals = y_true - y_pred
-    mae = np.mean(np.abs(residuals))
-
-    if mae == 0.0:
-        return 0.0
-
-    std_residuals = np.std(residuals)
-    return float((std_residuals / mae) * 100)
-
-
 def _calculate_rmse_to_mae_ratio(rmse: float, mae: float) -> float:
     """Calculate the ratio of RMSE to MAE.
 
@@ -278,14 +235,13 @@ def _calculate_rmse_to_mae_ratio(rmse: float, mae: float) -> float:
     return rmse / mae
 
 
-def _calculate_metrics(
+def _calculate_metric_values(
     y_true: np.ndarray,
     y_pred: np.ndarray,
 ) -> dict[str, float]:
-    """Calculate metrics.
+    """Compute a comprehensive set of metrics.
 
-    This function calculates a comprehensive set of metrics to evaluate the
-    performance of the system's predictions against the true values, including:
+    This function computes the following metrics:
     - Mean Absolute Error (MAE)
     - Mean Error (ME)
     - Root Mean Squared Error (RMSE)
@@ -293,20 +249,18 @@ def _calculate_metrics(
     - Weighted Absolute Percentage Error (WAPE)
     - Normalized Discounted Cumulative Gain (NDCG)
     - Spearman's Rank Correlation Coefficient
-    - Standard Deviation of Residuals
-    - Coefficient of Variation (CV) of Errors
     - RMSE to MAE Ratio
 
     Args:
         y_true (np.ndarray):
-            True values.
+            Array of true values.
 
         y_pred (np.ndarray):
-            Predicted values.
+            Array of predicted values.
 
     Returns:
         dict[str, float]:
-            Dictionary with metrics.
+            Dictionary containing all computed metric values.
     """
     mae = mean_absolute_error(y_true, y_pred)
     me = _calculate_me(y_true, y_pred)
@@ -315,8 +269,6 @@ def _calculate_metrics(
     wape = _calculate_wape(y_true, y_pred)
     ndcg = _calculate_ndcg(y_true, y_pred)
     spearman_corr, _ = spearmanr(y_true, y_pred)
-    std_dev = _calculate_std_dev(y_true, y_pred)
-    cv = _calculate_cv(y_true, y_pred)
     rmse_to_mae_ratio = _calculate_rmse_to_mae_ratio(rmse, mae)
 
     return {
@@ -327,8 +279,6 @@ def _calculate_metrics(
         "WAPE": wape,
         "NDCG": ndcg,
         "Spearman": spearman_corr,
-        "StdDev": std_dev,
-        "CV": cv,
         "RMSE/MAE": rmse_to_mae_ratio,
     }
 
@@ -401,110 +351,169 @@ async def _process_single_product(
         return product_data
 
 
-async def calculate_and_display_metrics(products: list) -> None:
-    """Calculate and display metrics from products list.
+async def _calculate_metrics(
+    products: list,
+    compare_with_baseline: bool,
+) -> None:
+    """Calculate metrics from products list.
+
+    This function computes metrics from a matrix where rows represent products
+    and columns represent independent estimate calls. Metrics are calculated
+    column-wise (across products for each call) while statistics are calculated
+    row-wise (consistency within each product across calls). Optionally compares
+    current metrics with baseline.
 
     Args:
-        products: List of product data dictionaries
+        products (list):
+            List of product data dictionaries.
+
+        compare_with_baseline (bool):
+            If True, compares current metrics with baseline metrics.
+
+    Returns:
+        None
     """
-    baseline_predictions = []
-    agent_predictions = []
-    true_values = []
-    excluded_agent_none = 0
-    excluded_missing_co2e = 0
-    excluded_missing_estimates = 0
+    # Extract true values
+    true_values = np.array([float(p["co2e_kg"]) for p in products])
+    num_products = len(products)
+    num_calls = config["emissions_enrichment"]["num_estimates_per_product"]
 
-    for product_data in products:
-        # Only include in metrics if agent returned a valid value
-        true_co2e = product_data["co2e_kg"]
-        co2e_kg_estimates = product_data["co2e_kg_estimates"]
+    # Populate current prediction matrix (rows=products, columns=calls) with
+    # estimates from products data
+    current_preds_matrix = np.full((num_products, num_calls), np.nan)
+    for row_idx, product_data in enumerate(products):
+        current_estimates = product_data["co2e_kg_estimates"]
+        for col_idx in range(min(len(current_estimates), num_calls)):
+            if current_estimates[col_idx] is not None:
+                current_preds_matrix[row_idx, col_idx] = float(
+                    current_estimates[col_idx],
+                )
 
-        if true_co2e is not None and co2e_kg_estimates:
-            true_values.append(true_co2e)
-            baseline_predictions.append(
-                float(co2e_kg_estimates[3])
-                if co2e_kg_estimates and len(co2e_kg_estimates) > 0
-                else None,
+    # Calculate current column-wise metrics (across products for each call)
+    current_call_metrics = [
+        _calculate_metric_values(true_values, current_preds_matrix[:, i])
+        for i in range(num_calls)
+    ]
+    current_metrics = (
+        {
+            k: np.mean([m[k] for m in current_call_metrics])
+            for k in current_call_metrics[0]
+        }
+        if current_call_metrics
+        else {}
+    )
+
+    # Calculate current row-wise statistics (within each product across calls)
+    current_means = np.nanmean(current_preds_matrix, axis=1)
+    current_stds = np.nanstd(current_preds_matrix, axis=1)
+    current_metrics["StdDev"] = (
+        float(np.nanmean(current_stds)) if len(current_stds) > 0 else 0.0
+    )
+    current_metrics["CV"] = (
+        float(
+            np.nanmean(
+                np.where(
+                    current_means != 0,
+                    current_stds / current_means,
+                    0.0,
+                ),
+            ),
+        )
+        if len(current_means) > 0
+        else 0.0
+    )
+
+    baseline_metrics = {}
+    if compare_with_baseline:
+        # Populate baseline prediction matrix (rows=products, columns=calls) with
+        # baseline estimates from products data
+        baseline_preds_matrix = np.full((num_products, num_calls), np.nan)
+        for row_idx, product_data in enumerate(products):
+            baseline_estimates = product_data[baseline_estimates_key]
+            baseline_preds_matrix[row_idx, : len(baseline_estimates)] = [
+                float(x) if x is not None else np.nan
+                for x in baseline_estimates[:num_calls]
+            ]
+
+        # Calculate baseline column-wise metrics (across products for each call)
+        baseline_call_metrics = [
+            _calculate_metric_values(true_values, baseline_preds_matrix[:, i])
+            for i in range(num_calls)
+        ]
+        baseline_metrics = (
+            {
+                k: np.mean([m[k] for m in baseline_call_metrics])
+                for k in baseline_call_metrics[0]
+            }
+            if baseline_call_metrics
+            else {}
+        )
+
+        # Calculate baseline row-wise statistics (within each product across calls)
+        baseline_means = np.nanmean(baseline_preds_matrix, axis=1)
+        baseline_stds = np.nanstd(baseline_preds_matrix, axis=1)
+        baseline_metrics["StdDev"] = (
+            float(np.nanmean(baseline_stds)) if len(baseline_stds) > 0 else 0.0
+        )
+        baseline_metrics["CV"] = (
+            float(
+                np.nanmean(
+                    np.where(
+                        baseline_means != 0,
+                        baseline_stds / baseline_means,
+                        0.0,
+                    ),
+                ),
             )
-            agent_predictions.append(float(co2e_kg_estimates[0]))
-        # Track why it was excluded
-        elif co2e_kg_estimates is None:
-            excluded_agent_none += 1
-        elif true_co2e is None:
-            excluded_missing_co2e += 1
-        elif not co2e_kg_estimates:
-            excluded_missing_estimates += 1
-
-    print("-" * 80)
-    print(f"\nProcessed: {len(products)} products successfully.")
-    print(
-        f"Included in metrics: {len(true_values)} products (agent returned valid values)",
-    )
-    print("\n📊 Exclusion Breakdown:")
-    print(f"  - Agent returned None: {excluded_agent_none} products")
-    print(f"  - Missing co2e_kg: {excluded_missing_co2e} products")
-    print(
-        f"  - Missing/empty estimates: {excluded_missing_estimates} products",
-    )
-    print(
-        f"  - Total excluded: {excluded_agent_none + excluded_missing_co2e + excluded_missing_estimates} products\n",
-    )
-
-    # Calculate and display metrics
-    if len(true_values) > 0:
-        true_values_arr = np.array(true_values)
-        baseline_predictions_arr = np.array(baseline_predictions)
-        agent_predictions_arr = np.array(agent_predictions)
-
-        print("=" * 80)
-        print("METRICS COMPARISON")
-        print("=" * 80)
-
-        # Baseline metrics
-        print("\n📊 BASELINE (First element of estimates vs co2e_kg):")
-        print("-" * 80)
-        baseline_metrics = _calculate_metrics(
-            true_values_arr,
-            baseline_predictions_arr,
+            if len(baseline_means) > 0
+            else 0.0
         )
+
+    # Display results
+    print("=" * 80)
+    print("Results")
+    print("=" * 80)
+
+    # Baseline metrics (if baseline comparison is enabled)
+    if compare_with_baseline:
+        print("\nBaseline System:")
+        print("-" * 80)
         for metric_name, metric_value in baseline_metrics.items():
-            if isinstance(metric_value, float):
+            if isinstance(metric_value, (float, np.floating)):
                 print(f"  {metric_name:12s}: {metric_value:12.4f}")
             else:
                 print(f"  {metric_name:12s}: {metric_value}")
 
-        # Agent metrics
-        print("\n🤖 AGENT (new_estimate vs co2e_kg):")
-        print("-" * 80)
-        agent_metrics = _calculate_metrics(
-            true_values_arr,
-            agent_predictions_arr,
-        )
-        for metric_name, metric_value in agent_metrics.items():
-            if isinstance(metric_value, float):
-                print(f"  {metric_name:12s}: {metric_value:12.4f}")
-            else:
-                print(f"  {metric_name:12s}: {metric_value}")
+    # Current system metrics
+    print("\nCurrent System:")
+    print("-" * 80)
+    for metric_name, metric_value in current_metrics.items():
+        if isinstance(metric_value, (float, np.floating)):
+            print(f"  {metric_name:12s}: {metric_value:12.4f}")
+        else:
+            print(f"  {metric_name:12s}: {metric_value}")
 
-        # Comparison
-        print("\n📈 IMPROVEMENT (Agent vs Baseline):")
+    # Baseline-current system comparison (if baseline comparison is enabled)
+    if compare_with_baseline:
+        print("\nBaseline vs. Current System:")
         print("-" * 80)
         for metric_name in baseline_metrics:
             baseline_val = baseline_metrics[metric_name]
-            agent_val = agent_metrics[metric_name]
+            current_val = current_metrics[metric_name]
 
+            # For ranking metrics, higher is better
             if metric_name in ["NDCG", "Spearman"]:
-                # For these metrics, higher is better
-                improvement = agent_val - baseline_val
+                improvement = current_val - baseline_val
                 improvement_pct = (
                     (improvement / abs(baseline_val) * 100)
                     if baseline_val != 0
                     else 0
                 )
                 direction = "↑" if improvement > 0 else "↓"
+
+            # For error metrics and statistics, lower is better
             else:
-                # For error metrics, lower is better
-                improvement = baseline_val - agent_val
+                improvement = baseline_val - current_val
                 improvement_pct = (
                     (improvement / abs(baseline_val) * 100)
                     if baseline_val != 0
@@ -516,12 +525,7 @@ async def calculate_and_display_metrics(products: list) -> None:
                 f"  {metric_name:12s}: {improvement:+.4f} ({improvement_pct:+.2f}%) {direction}",
             )
 
-        print("\n" + "=" * 80)
-    else:
-        print(
-            "❌ No valid metrics to calculate (all products returned None from agent)",
-        )
-        print("=" * 80)
+    print("\n" + "=" * 80)
 
 
 async def enrich_data_with_emissions() -> None:
@@ -576,6 +580,16 @@ async def enrich_data_with_emissions() -> None:
             # This product does not have any emission data
             products_to_process.append((idx, product_data))
 
+    num_initial_products = len(products)
+
+    # Sort products by 'co2e_kg' in descending order
+    products.sort(
+        key=lambda x: (
+            x["co2e_kg"] if x["co2e_kg"] is not None else float("-inf")
+        ),
+        reverse=True,
+    )
+
     # If all products already have the required emission data and
     # we are processing ground truth data, skip processing and directly
     # calculate metrics comparing emissions estimates with the ground truth value
@@ -586,7 +600,12 @@ async def enrich_data_with_emissions() -> None:
         print(
             f"All estimates already computed in {raw_jsonl_file}, calculating metrics...",
         )
-        await calculate_and_display_metrics(products)
+        await _calculate_metrics(
+            products,
+            compare_with_baseline=config["emissions_enrichment"][
+                "compare_with_baseline"
+            ],
+        )
         return
 
     # If all products already have the required emission data and we are
@@ -668,42 +687,56 @@ async def enrich_data_with_emissions() -> None:
         return
 
     # Use tqdm to display progress bar while processing products
-    processed_tasks = set()
     with tqdm(
         total=len(tasks),
         desc="Enriching products with emission data...",
     ) as pbar:
-        # Iterate over tasks as they complete and update products data accordingly
+        # Iterate over tasks as they complete to monitor progress and catch errors
         for next_to_complete in asyncio.as_completed(tasks):
             try:
-                # Get the result of the completed task, which is the updated product data
-                updated_product_data, _ = await next_to_complete
-
-                # Find the index of the product corresponding to the completed task
-                finished_task = next(
-                    t for t in tasks if t.done() and t not in processed_tasks
-                )
-                processed_tasks.add(finished_task)
-                idx = task_to_product_idx[finished_task]
-
-                # Update products data with emission estimates
-                products[idx] = updated_product_data
-
-                # Write updated products data back to processed JSONL file
-                with open(processed_jsonl_file, "w") as f:
-                    f.writelines(
-                        json.dumps(product) + "\n" for product in products
-                    )
-
+                # Await the task execution directly (fixes the unpacking bug)
+                await next_to_complete
             except Exception as e:
                 print(f"\nError processing a single product run: {e}")
             finally:
                 pbar.update(1)
 
+    # Sort final products by 'co2e_kg' in descending order before saving
+    products.sort(
+        key=lambda x: (
+            x["co2e_kg"] if x["co2e_kg"] is not None else float("-inf")
+        ),
+        reverse=True,
+    )
+
+    # Write fully updated and sorted products data back to processed JSONL file
+    with open(processed_jsonl_file, "w") as f:
+        f.writelines(json.dumps(product) + "\n" for product in products)
+
     if config["emissions_enrichment"]["is_ground_truth"]:
         # Calculate and display metrics
         print("Calculating metrics...")
-        await calculate_and_display_metrics(products)
+        await _calculate_metrics(
+            products,
+            compare_with_baseline=config["emissions_enrichment"][
+                "compare_with_baseline"
+            ],
+        )
+
+    # Sanity checks
+    vals = [p["co2e_kg"] for p in products if p["co2e_kg"] is not None]
+    assert len(products) == num_initial_products, (
+        f"Product count mismatch: expected {num_initial_products}, got {len(products)}"
+    )
+    assert len(products) == len({p["title"] for p in products}), (
+        "Duplicate titles found"
+    )
+    assert all(v >= 0 for v in vals), (
+        f"Negative co2e_kg found: {[v for v in vals if v < 0]}"
+    )
+    assert all(i >= j for i, j in zip(vals, vals[1:])), (
+        "Products are not sorted in descending order"
+    )
 
 
 if __name__ == "__main__":
