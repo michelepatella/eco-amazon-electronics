@@ -403,11 +403,17 @@ def predict_recommendations() -> None:
         None
     """
     # Load models and dataset
+    print(
+        f"Prediction start: top_k={config['inference']['top_k']}, models={SUPPORTED_MODELS}, llms={SUPPORTED_LLMS}",
+    )
     models_bundle = {}
     for model in SUPPORTED_MODELS:
         models_bundle[model] = load_data_and_model(
             model_file=model_registry[model]["model_path"],
         )
+    print(
+        f"Loaded models: {[(m, model_registry[m]['model_path']) for m in SUPPORTED_MODELS]}",
+    )
 
     # Load emission data
     emission_data = {
@@ -418,6 +424,10 @@ def predict_recommendations() -> None:
         }
         for llm in SUPPORTED_LLMS
     }
+    for llm in SUPPORTED_LLMS:
+        print(
+            f"Emission data loaded for {llm}: {len(emission_data[llm])} items",
+        )
 
     # Load (Item Index, Parent ASIN) mapping
     item_map_df = pd.read_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t")
@@ -426,6 +436,9 @@ def predict_recommendations() -> None:
             item_map_df["item_index"],
             item_map_df["parent_asin"],
         ),
+    )
+    print(
+        f"Item map loaded: {len(item_map)} entries from {DATA_INTERIM_MAPS_IMAP_PATH}",
     )
 
     # Compute top-k recommendations
@@ -444,6 +457,12 @@ def predict_recommendations() -> None:
             "item_ids": item_ids,
             "user_ids": user_ids,
         }
+        try:
+            print(
+                f"Computed top-{config['inference']['top_k']} for {model}: scores={scores.shape}, items={item_ids.shape}, users={len(user_ids)}",
+            )
+        except Exception:
+            print(f"Computed top-k for {model}: users={len(user_ids)}")
 
     # Re-rank recommendations varying the alpha parameter
     for llm in SUPPORTED_LLMS:
@@ -479,6 +498,9 @@ def predict_recommendations() -> None:
                 torch.save(
                     results,
                     model_registry[model]["preds_paths"][llm][alpha],
+                )
+                print(
+                    f"Saved predictions: {model_registry[model]['preds_paths'][llm][alpha]}",
                 )
 
 
