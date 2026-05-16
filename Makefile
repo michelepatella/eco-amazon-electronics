@@ -1,20 +1,22 @@
+conda_env = eco-amazon-electronics
+
 # ===================================
 # DATA PREPROCESSING
 # ===================================
 preprocess_data:
-	python -m src.data.preprocess
+	conda run --no-capture-output -n $(conda_env) python -u -m src.data.preprocess
 
 # ===================================
 # EMISSION DATA ENRICHMENT
 # ===================================
 enrich_data_with_emissions:
-	python -m src.data.enrich_with_emissions
+	conda run --no-capture-output -n $(conda_env) python -u -m src.data.enrich_with_emissions
 
 # ===================================
 # MODEL TRAINING
 # ===================================
 train_recsys:
-	python -m src.modeling.train
+	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.train
 
 # ===================================
 # MODEL INFERENCE
@@ -23,10 +25,10 @@ train_recsys:
 # RE-RANKING
 # ===================================
 predict_recommendations:
-	python -m src.modeling.predict
+	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.predict
 
 # ===================================
 # MODEL EVALUATION
 # ===================================
 evaluate_recsys:
-	python -m src.modeling.evaluate
+	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.evaluate
