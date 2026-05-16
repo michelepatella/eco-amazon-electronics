@@ -1,8 +1,8 @@
-# `logs/`
+# `reco2gnizer_logs/`
 
 Directory for all the pipeline execution logs involving the emission data enrichment process.
 
-**Note**: This project uses DVC to manage log files. Make sure `dvc` is installed, then pull all logging artifacts from the remote bucket:
+**Note**: This project uses DVC to manage the emission data enrichment process' log files. Make sure `dvc` is installed, then pull all logging artifacts from the remote bucket:
 ```bash
 dvc pull
 ```
