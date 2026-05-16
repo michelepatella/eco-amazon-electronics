@@ -661,7 +661,7 @@ async def enrich_data_with_emissions() -> None:
 
         # Generate the required number of tasks for this product based on
         # the runs needed
-        for _ in range(runs_needed):
+        for run_idx in range(runs_needed):
             safe_title = "_".join(
                 [
                     w
@@ -673,6 +673,8 @@ async def enrich_data_with_emissions() -> None:
                     if w
                 ],
             )
+            log_suffix = f"({run_idx + 1})" if runs_needed > 1 else ""
+
             task = asyncio.create_task(
                 _process_single_product(
                     product_data=product_data,
@@ -694,7 +696,7 @@ async def enrich_data_with_emissions() -> None:
                             "enable_logging"
                         ],
                         logs_dir=config["emissions_enrichment"]["logs_dir"],
-                        logs_path=f"{safe_title}.log",
+                        logs_path=f"{safe_title}{log_suffix}.log",
                     ),
                     semaphore=semaphore,
                     is_ground_truth=config["emissions_enrichment"][
