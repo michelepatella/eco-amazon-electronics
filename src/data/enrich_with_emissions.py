@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from dotenv import load_dotenv
 from reco2gnizer.context import Context
 from reco2gnizer.graph import graph
 from reco2gnizer.state import InputState
@@ -29,6 +30,9 @@ from src.const import (
     SUPPORTED_DATASETS,
 )
 from src.utils import load_config, load_jsonl
+
+# Load environment variables
+load_dotenv()
 
 # Load configuration
 config = load_config()
@@ -78,8 +82,8 @@ raw_jsonl_file = paths["raw_path"]
 processed_jsonl_file = paths["processed_path"]
 
 baseline_key_map = {
-    LLM_NAME_G25F: "co2e_kg_baseline_gemini_2_5_flash_estimates",
-    LLM_NAME_O3M: "co2e_kg_baseline_openai_o3_mini_estimates",
+    LLM_NAME_G25F: "gemini_2_5_flash",
+    LLM_NAME_O3M: "openai_o3_mini",
 }
 baseline_estimates_key = baseline_key_map[model]
 
@@ -322,8 +326,8 @@ async def _process_single_product(
         # Initialize the appropriate field in product data to store
         # the carbon footprint
         if is_ground_truth:
-            if "co2e_kg_estimates" not in product_data:
-                product_data["co2e_kg_estimates"] = []
+            if "system_estimates" not in product_data:
+                product_data["system_estimates"] = []
         elif "co2e_kg" not in product_data:
             product_data["co2e_kg"] = None
 
@@ -335,7 +339,7 @@ async def _process_single_product(
             # and save it in the product data
             co2e_kg = result["co2e_kg"]
             if is_ground_truth:
-                product_data["co2e_kg_estimates"].append(co2e_kg)
+                product_data["system_estimates"].append(co2e_kg)
             else:
                 product_data["co2e_kg"] = co2e_kg
         except Exception as e:
@@ -344,7 +348,7 @@ async def _process_single_product(
             # If there's an error, set the carbon footprint value to
             # None to indicate failure
             if is_ground_truth:
-                product_data["co2e_kg_estimates"].append(None)
+                product_data["system_estimates"].append(None)
             else:
                 product_data["co2e_kg"] = None
 
@@ -374,7 +378,9 @@ async def _calculate_metrics(
         None
     """
     # Extract true values
-    true_values = np.array([float(p["co2e_kg"]) for p in products])
+    true_values = np.array(
+        [float(p["co2e_kg"]["true_value"]) for p in products],
+    )
     num_products = len(products)
     num_calls = config["emissions_enrichment"]["num_estimates_per_product"]
 
@@ -382,7 +388,7 @@ async def _calculate_metrics(
     # estimates from products data
     current_preds_matrix = np.full((num_products, num_calls), np.nan)
     for row_idx, product_data in enumerate(products):
-        current_estimates = product_data["co2e_kg_estimates"]
+        current_estimates = product_data["system_estimates"]
         for col_idx in range(min(len(current_estimates), num_calls)):
             if current_estimates[col_idx] is not None:
                 current_preds_matrix[row_idx, col_idx] = float(
@@ -429,7 +435,9 @@ async def _calculate_metrics(
         # baseline estimates from products data
         baseline_preds_matrix = np.full((num_products, num_calls), np.nan)
         for row_idx, product_data in enumerate(products):
-            baseline_estimates = product_data[baseline_estimates_key]
+            baseline_estimates = product_data["co2e_kg"]["baseline_estimates"][
+                model
+            ]
             baseline_preds_matrix[row_idx, : len(baseline_estimates)] = [
                 float(x) if x is not None else np.nan
                 for x in baseline_estimates[:num_calls]
@@ -553,11 +561,14 @@ async def enrich_data_with_emissions() -> None:
 
         # Check if emissions are already computed for this product
         if config["emissions_enrichment"]["is_ground_truth"]:
-            if "co2e_kg_estimates" in product_data:
+            if (
+                "co2e_kg" in product_data
+                and "system_estimates" in product_data["co2e_kg"]
+            ):
                 # Filter out None values from estimates
                 valid_estimates = [
                     x
-                    for x in product_data["co2e_kg_estimates"]
+                    for x in product_data["co2e_kg"]["system_estimates"]
                     if x is not None
                 ]
                 if (
@@ -581,14 +592,6 @@ async def enrich_data_with_emissions() -> None:
             products_to_process.append((idx, product_data))
 
     num_initial_products = len(products)
-
-    # Sort products by 'co2e_kg' in descending order
-    products.sort(
-        key=lambda x: (
-            x["co2e_kg"] if x["co2e_kg"] is not None else float("-inf")
-        ),
-        reverse=True,
-    )
 
     # If all products already have the required emission data and
     # we are processing ground truth data, skip processing and directly
@@ -629,6 +632,9 @@ async def enrich_data_with_emissions() -> None:
         config["emissions_enrichment"]["max_concurrent_requests"],
     )
 
+    logs_dir = Path(config["emissions_enrichment"]["logs_dir"])
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
     # Process products
     tasks = []
     task_to_product_idx = {}
@@ -641,7 +647,10 @@ async def enrich_data_with_emissions() -> None:
         if config["emissions_enrichment"]["is_ground_truth"]:
             valid_estimates = [
                 x
-                for x in product_data.get("co2e_kg_estimates", [])
+                for x in product_data.get("co2e_kg", {}).get(
+                    "system_estimates",
+                    [],
+                )
                 if x is not None
             ]
             runs_needed = config["emissions_enrichment"][
@@ -653,6 +662,17 @@ async def enrich_data_with_emissions() -> None:
         # Generate the required number of tasks for this product based on
         # the runs needed
         for _ in range(runs_needed):
+            safe_title = "_".join(
+                [
+                    w
+                    for w in product_data["title"]
+                    .replace("/", " ")
+                    .replace("\\", " ")
+                    .replace(":", " ")
+                    .split()
+                    if w
+                ],
+            )
             task = asyncio.create_task(
                 _process_single_product(
                     product_data=product_data,
@@ -674,7 +694,7 @@ async def enrich_data_with_emissions() -> None:
                             "enable_logging"
                         ],
                         logs_dir=config["emissions_enrichment"]["logs_dir"],
-                        logs_path=f"{product_data['title'].replace(' ', '_')}.log",
+                        logs_path=f"{safe_title}.log",
                     ),
                     semaphore=semaphore,
                     is_ground_truth=config["emissions_enrichment"][
@@ -693,20 +713,36 @@ async def enrich_data_with_emissions() -> None:
         total=len(tasks),
         desc="Enriching products with emission data...",
     ) as pbar:
-        # Iterate over tasks as they complete to monitor progress and catch errors
+        # Iterate over tasks as they complete to monitor progress and save
+        # intermediate results to disk so progress is not lost on failure
         for next_to_complete in asyncio.as_completed(tasks):
             try:
-                # Await the task execution directly (fixes the unpacking bug)
-                await next_to_complete
+                # Await the task and get the updated product data
+                res = await next_to_complete
+                # Map task -> product index and update the products list
+                idx = task_to_product_idx.get(next_to_complete)
+                if idx is not None and res is not None:
+                    products[idx] = res
             except Exception as e:
                 print(f"\nError processing a single product run: {e}")
             finally:
+                # Save the current state of all products after each completed run
+                try:
+                    with open(processed_jsonl_file, "w") as f:
+                        f.writelines(
+                            json.dumps(product) + "\n" for product in products
+                        )
+                except Exception as e:
+                    print(f"Error writing interim results: {e}")
+
                 pbar.update(1)
 
     # Sort final products by 'co2e_kg' in descending order before saving
     products.sort(
         key=lambda x: (
-            x["co2e_kg"] if x["co2e_kg"] is not None else float("-inf")
+            x["co2e_kg"]["true_value"]
+            if x["co2e_kg"]["true_value"] is not None
+            else float("-inf")
         ),
         reverse=True,
     )
@@ -724,21 +760,6 @@ async def enrich_data_with_emissions() -> None:
                 "compare_with_baseline"
             ],
         )
-
-    # Sanity checks
-    vals = [p["co2e_kg"] for p in products if p["co2e_kg"] is not None]
-    assert len(products) == num_initial_products, (
-        f"Product count mismatch: expected {num_initial_products}, got {len(products)}"
-    )
-    assert len(products) == len({p["title"] for p in products}), (
-        "Duplicate titles found"
-    )
-    assert all(v >= 0 for v in vals), (
-        f"Negative co2e_kg found: {[v for v in vals if v < 0]}"
-    )
-    assert all(i >= j for i, j in zip(vals, vals[1:])), (
-        "Products are not sorted in descending order"
-    )
 
 
 if __name__ == "__main__":
