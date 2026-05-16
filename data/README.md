@@ -13,7 +13,7 @@ dvc pull
 |------|--------|--------|------|------|--------|-------------|
 | `amazon_reviews_23/item_metadata/electronics.jsonl` | JSONL | Amazon Reviews'23 | 48.2 MB | 9,710 | `main_category`, `title`, `average_rating`, `rating_number`, `features`, `description`, `price`, `images`, `videos`, `store`, `categories`, `details`, `parent_asin`, `bought_together` | Item metadata (15-core filtered) |
 | `amazon_reviews_23/user_reviews/electronics.jsonl` | JSONL | Amazon Reviews'23 | 262.4 MB | 464,464 | `rating`, `title`, `text`, `images`, `asin`, `parent_asin`, `user_id`, `timestamp`, `helpful_vote`, `verified_purchase` | User reviews (15-core filtered) |
-| `ground_truths/electronics.jsonl` | JSONL | Manually collected | 16 KB | 200 | `title`, `co2e_kg` | Items with known PCF values |
+| `ground_truths/electronics.jsonl` | JSONL | Manually collected | 41 KB | 200 | `title`, `co2e_kg` | Items with known PCF values |
 
 ## `interim/`
 
