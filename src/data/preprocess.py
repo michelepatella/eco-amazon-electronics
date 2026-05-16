@@ -4,7 +4,6 @@ Preprocess data.
 """
 
 import pandas as pd
-from tqdm import tqdm
 
 from src.const import (
     DATA_INTERIM_MAPS_IMAP_PATH,
@@ -379,14 +378,12 @@ def preprocess_data() -> None:
     Returns:
         None
     """
-    steps = tqdm(total=5)
     print(
         f"Preprocess start: dataset={dataset_name}, raw_path={raw_user_reviews_path}",
     )
 
     # Load raw user reviews and sort chronologically by user and timestamp
     # to maintain temporal order of interactions for each user
-    steps.set_description("Loading raw user reviews")
     user_reviews = pd.read_json(raw_user_reviews_path, lines=True).sort_values(
         by=[DATASET_RAW_UR_USER_ID_COL, DATASET_RAW_UR_TIMESTAMP_COL],
     )
@@ -396,10 +393,8 @@ def preprocess_data() -> None:
     print(
         f"Loaded {n_raw} rows — users={n_users_raw}, items={n_items_raw}",
     )
-    steps.update(1)
 
     # Remove duplicate user-item interactions, keeping the most recent rating
-    steps.set_description("Deduplicating user-item interactions")
     n_before = len(user_reviews)
     user_reviews = _deduplicate_user_reviews(
         user_reviews,
@@ -408,22 +403,18 @@ def preprocess_data() -> None:
     n_after_dedup = len(user_reviews)
     n_users_after_dedup = user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()
     n_items_after_dedup = user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()
-    steps.update(1)
     print(
         f"Deduplicated: {n_before} -> {n_after_dedup} (removed {n_before - n_after_dedup})",
     )
 
     # Create and persist user/item ID to index mappings
-    steps.set_description("Building user/item maps")
     map_users, map_items = _build_user_item_maps(user_reviews)
-    steps.update(1)
     print(
         f"Maps built: users={len(map_users)}, items={len(map_items)} — saved to {DATA_INTERIM_MAPS_UMAP_PATH} / {DATA_INTERIM_MAPS_IMAP_PATH}",
     )
 
     # Binarize ratings using positive threshold, creating implicit feedback
     # matrix suitable for recommendation models
-    steps.set_description("Binarizing user-item interactions")
     binarized_user_reviews = _binarize_user_reviews(
         user_reviews,
         map_users,
@@ -439,22 +430,17 @@ def preprocess_data() -> None:
     n_items_binarized = binarized_user_reviews[
         DATASET_PROCESSED_UR_ITEM_ID_COL
     ].nunique()
-    steps.update(1)
     print(
         f"Binarized interactions: total={n_total_interactions}, positives={n_positives}",
     )
 
     # Split binarized interactions into train/valid/test sets and persist
     # each split separately for downstream model training and evaluation
-    steps.set_description("Splitting user reviews into train/valid/test")
     train_df, valid_df, test_df = _split_user_reviews(
         binarized_user_reviews,
         train_ratio=config["preprocessing"]["train_ratio"],
         valid_ratio=config["preprocessing"]["valid_ratio"],
     )
-    steps.update(1)
-    steps.set_description("Data preprocessing completed")
-    steps.close()
 
     # Print summary
     print("\n" + "=" * 100)
