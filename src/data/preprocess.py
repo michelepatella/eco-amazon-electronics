@@ -290,7 +290,8 @@ def _split_user_reviews(
             Proportion of data for validation set.
 
     Returns:
-        None
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+            A tuple containing train, validation, and test dataframes.
     """
     # Initialize lists to accumulate splits across all users
     train_splits = []
@@ -360,6 +361,8 @@ def _split_user_reviews(
     assert len(train_df) > 0
     assert train_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() > 0
 
+    return train_df, valid_df, test_df
+
 
 def preprocess_data() -> None:
     """Execute the complete preprocessing pipeline for data.
@@ -387,8 +390,11 @@ def preprocess_data() -> None:
     user_reviews = pd.read_json(raw_user_reviews_path, lines=True).sort_values(
         by=[DATASET_RAW_UR_USER_ID_COL, DATASET_RAW_UR_TIMESTAMP_COL],
     )
+    n_raw = len(user_reviews)
+    n_users_raw = user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()
+    n_items_raw = user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()
     print(
-        f"Loaded {len(user_reviews)} rows — users={user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()}, items={user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()}",
+        f"Loaded {n_raw} rows — users={n_users_raw}, items={n_items_raw}",
     )
     steps.update(1)
 
@@ -399,9 +405,12 @@ def preprocess_data() -> None:
         user_reviews,
         keep=config["preprocessing"]["deduplication_keep"],
     )
+    n_after_dedup = len(user_reviews)
+    n_users_after_dedup = user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()
+    n_items_after_dedup = user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()
     steps.update(1)
     print(
-        f"Deduplicated: {n_before} -> {len(user_reviews)} (removed {n_before - len(user_reviews)})",
+        f"Deduplicated: {n_before} -> {n_after_dedup} (removed {n_before - n_after_dedup})",
     )
 
     # Create and persist user/item ID to index mappings
@@ -421,15 +430,24 @@ def preprocess_data() -> None:
         map_items,
         threshold=config["preprocessing"]["bin_rating_threshold"],
     )
+    n_total_interactions = len(binarized_user_reviews)
+    n_positives = binarized_user_reviews[DATASET_PROCESSED_UR_RATING_COL].sum()
+    n_negatives = n_total_interactions - n_positives
+    n_users_binarized = binarized_user_reviews[
+        DATASET_PROCESSED_UR_USER_ID_COL
+    ].nunique()
+    n_items_binarized = binarized_user_reviews[
+        DATASET_PROCESSED_UR_ITEM_ID_COL
+    ].nunique()
     steps.update(1)
     print(
-        f"Binarized interactions: total={len(binarized_user_reviews)}, positives={binarized_user_reviews[DATASET_PROCESSED_UR_RATING_COL].sum()}",
+        f"Binarized interactions: total={n_total_interactions}, positives={n_positives}",
     )
 
     # Split binarized interactions into train/valid/test sets and persist
     # each split separately for downstream model training and evaluation
     steps.set_description("Splitting user reviews into train/valid/test")
-    _split_user_reviews(
+    train_df, valid_df, test_df = _split_user_reviews(
         binarized_user_reviews,
         train_ratio=config["preprocessing"]["train_ratio"],
         valid_ratio=config["preprocessing"]["valid_ratio"],
@@ -437,6 +455,92 @@ def preprocess_data() -> None:
     steps.update(1)
     steps.set_description("Data preprocessing completed")
     steps.close()
+
+    # Print summary
+    print("\n" + "=" * 100)
+    print("Data Preprocessing Summary")
+    print("=" * 100)
+
+    # Stage-by-stage statistics
+    summary_stats = pd.DataFrame(
+        {
+            "Stage": [
+                "Raw",
+                "After Deduplication",
+                "After Binarization",
+                "Train Split",
+                "Validation Split",
+                "Test Split",
+            ],
+            "Interactions": [
+                n_raw,
+                n_after_dedup,
+                n_total_interactions,
+                len(train_df),
+                len(valid_df),
+                len(test_df),
+            ],
+            "Unique Users": [
+                n_users_raw,
+                n_users_after_dedup,
+                n_users_binarized,
+                train_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique(),
+                valid_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique(),
+                test_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique(),
+            ],
+            "Unique Items": [
+                n_items_raw,
+                n_items_after_dedup,
+                n_items_binarized,
+                train_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique(),
+                valid_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique(),
+                test_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique(),
+            ],
+        },
+    )
+    print("\nProcessing Stages")
+    print(summary_stats.to_string(index=False))
+
+    # Interaction quality summary
+    print("\nInteraction Quality")
+    quality_stats = pd.DataFrame(
+        {
+            "Metric": [
+                "Total Interactions",
+                "Positive (rating >= threshold)",
+                "Negative (rating < threshold)",
+                "Positive Ratio",
+            ],
+            "Value": [
+                f"{n_total_interactions:,}",
+                f"{n_positives:,}",
+                f"{n_negatives:,}",
+                f"{(n_positives / n_total_interactions * 100):.2f}%",
+            ],
+        },
+    )
+    print(quality_stats.to_string(index=False))
+
+    # Sparsity metrics
+    print("\nSparsity")
+    sparsity_stats = pd.DataFrame(
+        {
+            "Set": ["Train", "Validation", "Test"],
+            "Interactions": [
+                f"{len(train_df):,}",
+                f"{len(valid_df):,}",
+                f"{len(test_df):,}",
+            ],
+            "Density (interactions/users/items)": [
+                f"{len(train_df) / (train_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() * train_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique()):.4f}",
+                f"{len(valid_df) / (valid_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() * valid_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique()):.4f}",
+                f"{len(test_df) / (test_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() * test_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique()):.4f}",
+            ],
+        },
+    )
+    print(sparsity_stats.to_string(index=False))
+
+    print("=" * 100 + "\n")
 
 
 if __name__ == "__main__":
