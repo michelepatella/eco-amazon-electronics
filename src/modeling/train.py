@@ -8,6 +8,7 @@ import hashlib
 import os
 import shutil
 
+import pandas as pd
 import ray
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
@@ -301,6 +302,57 @@ def train_recsys() -> None:
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
         os.replace(ckpt, target_path)
         print(f"Saved final model for {model} to {target_path}")
+
+    # Print training summary
+    print("\n" + "=" * 140)
+    print("Training Summary")
+    print("=" * 140)
+
+    summary_data = []
+    for model in SUPPORTED_MODELS:
+        best_result = tuning_results[model].get_best_result()
+        best_config = best_result.config
+        best_score = (
+            best_result.metrics.get(TUNING_VAL_METRIC["name"])
+            if hasattr(best_result, "metrics")
+            else "N/A"
+        )
+
+        # Get supported params for this model
+        supported_params = MODEL_SUPPORTED_PARAMS.get(model, set())
+        best_hparams = {
+            k: v for k, v in best_config.items() if k in supported_params
+        }
+
+        summary_data.append(
+            {
+                "Model": model,
+                "Best Score": f"{best_score:.6f}"
+                if isinstance(best_score, float)
+                else best_score,
+                "Num Trials": len(tuning_results[model]),
+                "Best Hyperparameters": str(best_hparams),
+                "Model Path": model_registry[model]["model_path"],
+            },
+        )
+
+    summary_df = pd.DataFrame(summary_data)
+    print(summary_df.to_string(index=False))
+
+    # Print additional details
+    print("\n" + "-" * 140)
+    print("Detailed Best Hyperparameters per Model:")
+    print("-" * 140)
+    for model in SUPPORTED_MODELS:
+        best_result = tuning_results[model].get_best_result()
+        best_config = best_result.config
+        supported_params = MODEL_SUPPORTED_PARAMS.get(model, set())
+        best_hparams = {
+            k: v for k, v in best_config.items() if k in supported_params
+        }
+        print(f"\n{model}:")
+        for param, value in sorted(best_hparams.items()):
+            print(f"  {param}: {value}")
 
 
 if __name__ == "__main__":
