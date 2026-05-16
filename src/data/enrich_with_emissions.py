@@ -575,18 +575,29 @@ async def enrich_data_with_emissions() -> None:
     """
     # Load products from JSONL file and check if all the
     # emissions are already computed
+    processed_lookup = {}
+    if Path(processed_jsonl_file).exists():
+        for p in load_jsonl(str(Path(processed_jsonl_file))):
+            if "title" in p:
+                processed_lookup[p["title"]] = p
+
     products = []
     products_to_process = []
     for idx, product_data in enumerate(load_jsonl(str(Path(raw_jsonl_file)))):
+        existing_data = processed_lookup.get(
+            product_data["title"],
+            product_data,
+        )
+
         # Save product data
-        products.append(product_data)
+        products.append(existing_data)
 
         # Check if emissions are already computed for this product
         if config["emissions_enrichment"]["is_ground_truth"]:
-            if "system_estimates" in product_data:
+            if "system_estimates" in existing_data:
                 valid_estimates = [
                     (x.get("value") if isinstance(x, dict) else x)
-                    for x in product_data["system_estimates"]
+                    for x in existing_data["system_estimates"]
                 ]
                 valid_estimates = [v for v in valid_estimates if v is not None]
 
@@ -598,17 +609,17 @@ async def enrich_data_with_emissions() -> None:
                 ):
                     # This product does not have the required number of
                     # emission estimates
-                    products_to_process.append((idx, product_data))
+                    products_to_process.append((idx, existing_data))
             else:
                 # This product does not have any emission estimates
-                products_to_process.append((idx, product_data))
-        elif "co2e_kg" in product_data:
-            if product_data["co2e_kg"] is None:
+                products_to_process.append((idx, existing_data))
+        elif "co2e_kg" in existing_data:
+            if existing_data["co2e_kg"] is None:
                 # This product does not have a valid emission value
-                products_to_process.append((idx, product_data))
+                products_to_process.append((idx, existing_data))
         else:
             # This product does not have any emission data
-            products_to_process.append((idx, product_data))
+            products_to_process.append((idx, existing_data))
 
     # If all products already have the required emission data and
     # we are processing ground truth data, skip processing and directly
