@@ -346,8 +346,17 @@ async def _process_single_product(
         # Initialize the appropriate field in product data to store
         # the carbon footprint
         if is_ground_truth:
-            if "system_estimates" not in product_data:
-                product_data["system_estimates"] = []
+            if (
+                "co2e_kg" not in product_data
+                or product_data["co2e_kg"] is None
+            ):
+                product_data["co2e_kg"] = {
+                    "true_value": None,
+                    "baseline_estimates": {},
+                    "system_estimates": [],
+                }
+            elif "system_estimates" not in product_data["co2e_kg"]:
+                product_data["co2e_kg"]["system_estimates"] = []
         elif "co2e_kg" not in product_data:
             product_data["co2e_kg"] = None
 
@@ -359,7 +368,7 @@ async def _process_single_product(
             # and save it in the product data
             co2e_kg = result["co2e_kg"]
             if is_ground_truth:
-                product_data["system_estimates"].append(co2e_kg)
+                product_data["co2e_kg"]["system_estimates"].append(co2e_kg)
             else:
                 product_data["co2e_kg"] = co2e_kg
         except Exception as e:
@@ -368,7 +377,7 @@ async def _process_single_product(
             # If there's an error, set the carbon footprint value to
             # None to indicate failure
             if is_ground_truth:
-                product_data["system_estimates"].append(None)
+                product_data["co2e_kg"]["system_estimates"].append(None)
             else:
                 product_data["co2e_kg"] = None
 
@@ -408,7 +417,11 @@ async def _calculate_metrics(
     # estimates from products data
     current_preds_matrix = np.full((num_products, num_calls), np.nan)
     for row_idx, product_data in enumerate(products):
-        current_estimates = product_data.get("system_estimates", [])
+        current_estimates = (
+            product_data.get("co2e_kg", {}).get("system_estimates", [])
+            if isinstance(product_data.get("co2e_kg"), dict)
+            else []
+        )
         for col_idx in range(min(len(current_estimates), num_calls)):
             est = current_estimates[col_idx]
             if est is not None:
@@ -594,10 +607,14 @@ async def enrich_data_with_emissions() -> None:
 
         # Check if emissions are already computed for this product
         if config["emissions_enrichment"]["is_ground_truth"]:
-            if "system_estimates" in existing_data:
+            if (
+                "co2e_kg" in existing_data
+                and isinstance(existing_data["co2e_kg"], dict)
+                and "system_estimates" in existing_data["co2e_kg"]
+            ):
                 valid_estimates = [
                     (x.get("value") if isinstance(x, dict) else x)
-                    for x in existing_data["system_estimates"]
+                    for x in existing_data["co2e_kg"]["system_estimates"]
                 ]
                 valid_estimates = [v for v in valid_estimates if v is not None]
 
@@ -673,7 +690,11 @@ async def enrich_data_with_emissions() -> None:
         # or not and how many valid estimates it already has
         # (in case of ground truth data)
         if config["emissions_enrichment"]["is_ground_truth"]:
-            raw_estimates = product_data.get("system_estimates", [])
+            raw_estimates = (
+                product_data.get("co2e_kg", {}).get("system_estimates", [])
+                if isinstance(product_data.get("co2e_kg"), dict)
+                else []
+            )
             valid_estimates = [
                 (x.get("value") if isinstance(x, dict) else x)
                 for x in raw_estimates
