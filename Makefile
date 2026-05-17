@@ -7,7 +7,8 @@ OS_INFO = $(shell uname -srm 2>/dev/null || echo "Unknown OS")
 
 define run_pipeline_step
     @mkdir -p logs/pipeline
-    @LOG_FILE="logs/pipeline/$(1).log"; \
+    @TIMESTAMP=$$(date '+%Y%m%d_%H%M%S'); \
+    LOG_FILE="logs/pipeline/$(1)_$${TIMESTAMP}.log"; \
     echo "====================================================================================================" | tee -a $$LOG_FILE; \
     echo "Starting Step | $(1)" | tee -a $$LOG_FILE; \
     echo "Git Branch    | $(GIT_BRANCH)" | tee -a $$LOG_FILE; \
