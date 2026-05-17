@@ -32,5 +32,5 @@ dvc pull
 | `amazon_reviews_23/user_reviews/electronics/electronics.train.inter` | TSV | Generated | 9.6 MB | 363,022 | `user_id:token`, `item_id:token`, `rating:float`, `timestamp:float` | Training split in RecBole format |
 | `amazon_reviews_23/user_reviews/electronics/electronics.valid.inter` | TSV | Generated | 936 KB | 35,117 | `user_id:token`, `item_id:token`, `rating:float`, `timestamp:float` | Validation split in RecBole format |
 | `amazon_reviews_23/user_reviews/electronics/electronics.test.inter` | TSV | Generated | 1.8 MB | 65,862 | `user_id:token`, `item_id:token`, `rating:float`, `timestamp:float` | Test split in RecBole format |
-| `ground_truths/google_genai:gemini-2.5-flash/electronics.jsonl` | JSONL | Gemini 2.5 Flash enrichment | - | 200 | `title`, `co2e_kg` | Items with known PCF values enriched with Gemini 2.5 Flash estimates |
+| `ground_truths/google_genai:gemini-2.5-flash/electronics.jsonl` | JSONL | Gemini 2.5 Flash enrichment | 306 KB | 200 | `title`, `co2e_kg` | Items with known PCF values enriched with Gemini 2.5 Flash estimates |
 | `ground_truths/openai:o3-mini/electronics.jsonl` | JSONL | OpenAI o3-mini enrichment | - | 200 | `title`, `co2e_kg` | Items with known PCF values enriched with OpenAI o3-mini estimates |
