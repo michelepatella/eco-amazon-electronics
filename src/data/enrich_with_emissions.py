@@ -534,7 +534,7 @@ async def _calculate_metrics(
     # Baseline-current system comparison (if baseline comparison is enabled)
     if compare_with_baseline:
         print("\nBaseline vs. Current System Results:")
-        print("-" * 80)
+        print("-" * 100)
         for metric_name in baseline_metrics:
             baseline_val = baseline_metrics[metric_name]
             current_val = current_metrics[metric_name]
