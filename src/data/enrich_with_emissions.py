@@ -512,15 +512,10 @@ async def _calculate_metrics(
             else 0.0
         )
 
-    # Display results
-    print("=" * 80)
-    print("Results")
-    print("=" * 80)
-
     # Baseline metrics (if baseline comparison is enabled)
     if compare_with_baseline:
-        print("\nBaseline System:")
-        print("-" * 80)
+        print("\nBaseline System Results:")
+        print("-" * 100)
         for metric_name, metric_value in baseline_metrics.items():
             if isinstance(metric_value, (float, np.floating)):
                 print(f"  {metric_name:12s}: {metric_value:12.4f}")
@@ -528,8 +523,8 @@ async def _calculate_metrics(
                 print(f"  {metric_name:12s}: {metric_value}")
 
     # Current system metrics
-    print("\nCurrent System:")
-    print("-" * 80)
+    print("\nCurrent System Results:")
+    print("-" * 100)
     for metric_name, metric_value in current_metrics.items():
         if isinstance(metric_value, (float, np.floating)):
             print(f"  {metric_name:12s}: {metric_value:12.4f}")
@@ -538,7 +533,7 @@ async def _calculate_metrics(
 
     # Baseline-current system comparison (if baseline comparison is enabled)
     if compare_with_baseline:
-        print("\nBaseline vs. Current System:")
+        print("\nBaseline vs. Current System Results:")
         print("-" * 80)
         for metric_name in baseline_metrics:
             baseline_val = baseline_metrics[metric_name]
@@ -567,8 +562,6 @@ async def _calculate_metrics(
             print(
                 f"  {metric_name:12s}: {improvement:+.4f} ({improvement_pct:+.2f}%) {direction}",
             )
-
-    print("\n" + "=" * 80)
 
 
 async def enrich_data_with_emissions() -> None:
