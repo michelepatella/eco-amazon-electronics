@@ -5,7 +5,7 @@ emissions_enrichment:
   # Type: int
   # Constraints: > 0
   # -------------------------------------------------------------------------------------
-  num_estimates_per_product: 3
+  num_estimates_per_product: 4
 
   # -------------------------------------------------------------------------------------
   # Description: The maximum number of concurrent requests to the enrichment system.
