@@ -341,9 +341,6 @@ def _split_user_reviews(
     ]
 
     # Save all splits in RecBole format
-    print(
-        f"Split sizes: train={len(train_df)}, valid={len(valid_df)}, test={len(test_df)}",
-    )
     train_df.to_csv(processed_user_reviews_train_path, sep="\t", index=False)
     valid_df.to_csv(processed_user_reviews_valid_path, sep="\t", index=False)
     test_df.to_csv(processed_user_reviews_test_path, sep="\t", index=False)
@@ -378,10 +375,6 @@ def preprocess_data() -> None:
     Returns:
         None
     """
-    print(
-        f"Preprocess start: dataset={dataset_name}, raw_path={raw_user_reviews_path}",
-    )
-
     # Load raw user reviews and sort chronologically by user and timestamp
     # to maintain temporal order of interactions for each user
     user_reviews = pd.read_json(raw_user_reviews_path, lines=True).sort_values(
@@ -390,9 +383,6 @@ def preprocess_data() -> None:
     n_raw = len(user_reviews)
     n_users_raw = user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()
     n_items_raw = user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()
-    print(
-        f"Loaded {n_raw} rows — users={n_users_raw}, items={n_items_raw}",
-    )
 
     # Remove duplicate user-item interactions, keeping the most recent rating
     n_before = len(user_reviews)
@@ -403,15 +393,9 @@ def preprocess_data() -> None:
     n_after_dedup = len(user_reviews)
     n_users_after_dedup = user_reviews[DATASET_RAW_UR_USER_ID_COL].nunique()
     n_items_after_dedup = user_reviews[DATASET_RAW_UR_ASIN_COL].nunique()
-    print(
-        f"Deduplicated: {n_before} -> {n_after_dedup} (removed {n_before - n_after_dedup})",
-    )
 
     # Create and persist user/item ID to index mappings
     map_users, map_items = _build_user_item_maps(user_reviews)
-    print(
-        f"Maps built: users={len(map_users)}, items={len(map_items)} — saved to {DATA_INTERIM_MAPS_UMAP_PATH} / {DATA_INTERIM_MAPS_IMAP_PATH}",
-    )
 
     # Binarize ratings using positive threshold, creating implicit feedback
     # matrix suitable for recommendation models
@@ -430,9 +414,6 @@ def preprocess_data() -> None:
     n_items_binarized = binarized_user_reviews[
         DATASET_PROCESSED_UR_ITEM_ID_COL
     ].nunique()
-    print(
-        f"Binarized interactions: total={n_total_interactions}, positives={n_positives}",
-    )
 
     # Split binarized interactions into train/valid/test sets and persist
     # each split separately for downstream model training and evaluation
@@ -443,9 +424,7 @@ def preprocess_data() -> None:
     )
 
     # Print summary
-    print("\n" + "=" * 100)
-    print("Data Preprocessing Summary")
-    print("=" * 100)
+    print("\nData Preprocessing Summary")
 
     # Stage-by-stage statistics
     summary_stats = pd.DataFrame(
@@ -484,8 +463,12 @@ def preprocess_data() -> None:
             ],
         },
     )
+
+    for col in ["Interactions", "Unique Users", "Unique Items"]:
+        summary_stats[col] = summary_stats[col].map(lambda x: f"{x:,}")
+
     print("\nProcessing Stages")
-    print(summary_stats.to_string(index=False))
+    print(summary_stats.to_markdown(index=False))
 
     # Interaction quality summary
     print("\nInteraction Quality")
@@ -505,7 +488,7 @@ def preprocess_data() -> None:
             ],
         },
     )
-    print(quality_stats.to_string(index=False))
+    print(quality_stats.to_markdown(index=False))
 
     # Sparsity metrics
     print("\nSparsity")
@@ -517,16 +500,14 @@ def preprocess_data() -> None:
                 f"{len(valid_df):,}",
                 f"{len(test_df):,}",
             ],
-            "Density (interactions/users/items)": [
+            "Density": [
                 f"{len(train_df) / (train_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() * train_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique()):.4f}",
                 f"{len(valid_df) / (valid_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() * valid_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique()):.4f}",
                 f"{len(test_df) / (test_df[DATASET_PROCESSED_UR_USER_ID_COL].nunique() * test_df[DATASET_PROCESSED_UR_ITEM_ID_COL].nunique()):.4f}",
             ],
         },
     )
-    print(sparsity_stats.to_string(index=False))
-
-    print("=" * 100 + "\n")
+    print(sparsity_stats.to_markdown(index=False))
 
 
 if __name__ == "__main__":
