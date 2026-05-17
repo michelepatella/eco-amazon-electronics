@@ -10,6 +10,7 @@ dvc pull
 ```text
 .
 ├── pipeline                                        <- All pipeline execution logs
+│   └── electronics
 ├── pipeline.dvc                                    <- Tracks pipeline execution logs with DVC
 ├── README.md                                       <- Structure overview (this file)
 ├── reco2gnizer                                     <- All agent execution logs
