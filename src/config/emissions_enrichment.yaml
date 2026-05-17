@@ -40,7 +40,7 @@ emissions_enrichment:
   # Type: float
   # Constraints: >= 0.0 and <= 1.0
   # -------------------------------------------------------------------------------------
-  model_temperature: None
+  model_temperature: null
 
   # -------------------------------------------------------------------------------------
   # Description: The maximum number of web search results to retrieve during enrichment.
