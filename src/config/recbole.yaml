@@ -11,7 +11,7 @@ recbole:
   # Type: int
   # Constraints: >= 0
   # ------------------------------------------------------------------------------------
-  worker: 0
+  worker: 4
 
   # ------------------------------------------------------------------------------------
   # Description: Random seed for reproducible results
@@ -245,7 +245,7 @@ recbole:
   # Type: str
   # Constraints: "cpu", "cuda", "mps"
   # ------------------------------------------------------------------------------------
-  device: "cpu"
+  device: "mps"
 
   # ------------------------------------------------------------------------------------
   # Description: Ratio of tail items to consider in TailPercentage metric calculation
