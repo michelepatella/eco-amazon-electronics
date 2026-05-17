@@ -53,21 +53,37 @@ define run_pipeline_step
 endef
 
 # ===================================
+# DVC
+# ===================================
+dvc-save:
+	@echo "Checking for modified files in DVC..."
+	@MODIFIED_FILES=$$(dvc status | grep "modified:" | awk '{print $$2}'); \
+	if [ -z "$$MODIFIED_FILES" ]; then \
+		echo "No modified files to track."; \
+	else \
+		echo "Adding modified files to DVC..."; \
+		echo "$$MODIFIED_FILES" | xargs dvc add; \
+		echo "Pushing to remote storage..."; \
+		dvc push; \
+        echo "Everything is up to date."; \
+	fi
+
+# ===================================
 # DATA PREPROCESSING
 # ===================================
-preprocess_data:
+preprocess-data:
 	$(call run_pipeline_step,preprocess_data,src.data.preprocess)
 
 # ===================================
 # EMISSION DATA ENRICHMENT
 # ===================================
-enrich_data_with_emissions:
+enrich-data-with-emissions:
 	$(call run_pipeline_step,enrich_data_with_emissions,src.data.enrich_with_emissions)
 
 # ===================================
 # MODEL TRAINING
 # ===================================
-train_recsys:
+train-recsys:
 	$(call run_pipeline_step,train_recsys,src.modeling.train)
 
 # ===================================
@@ -76,11 +92,11 @@ train_recsys:
 # SUSTAINABILITY-AWARE RECOMMENDATION
 # RE-RANKING
 # ===================================
-predict_recommendations:
+predict-recommendations:
 	$(call run_pipeline_step,predict_recommendations,src.modeling.predict)
 
 # ===================================
 # MODEL EVALUATION
 # ===================================
-evaluate_recsys:
+evaluate-recsys:
 	$(call run_pipeline_step,evaluate_recsys,src.modeling.evaluate)
