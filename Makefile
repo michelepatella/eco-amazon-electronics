@@ -1,37 +1,74 @@
 conda_env = eco-amazon-electronics
 
+GIT_COMMIT = $(shell git rev-parse --short HEAD 2>/dev/null || echo "No commit / Not a git repo")
+GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "Unknown branch")
+RUNNING_USER = $(shell whoami 2>/dev/null || echo "Unknown user")
+OS_INFO = $(shell uname -srm 2>/dev/null || echo "Unknown OS")
+
+define run_pipeline_step
+    @mkdir -p logs/pipeline
+    @LOG_FILE="logs/pipeline/$(1).log"; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    echo "Starting Step | $(1)" | tee -a $$LOG_FILE; \
+    echo "Git Branch    | $(GIT_BRANCH)" | tee -a $$LOG_FILE; \
+    echo "Git Commit    | $(GIT_COMMIT)" | tee -a $$LOG_FILE; \
+    echo "Running User  | $(RUNNING_USER)" | tee -a $$LOG_FILE; \
+    echo "Environment   | $(OS_INFO)" | tee -a $$LOG_FILE; \
+    echo "Start Time    | $$(date '+%Y-%m-%d %H:%M:%S')" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    echo "" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    echo "Configurations" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    for f in src/config/*.yaml; do \
+        if [ -f "$$f" ]; then \
+            echo "" | tee -a $$LOG_FILE; \
+            echo "  ==> $$f <==" | tee -a $$LOG_FILE; \
+            awk '/^[[:space:]]*#/ {next} /^[[:space:]]*$$/ {next} {print "    " $$0}' $$f | tee -a $$LOG_FILE; \
+        fi \
+    done; \
+	echo "" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    echo "" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    echo "Process Execution" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    START_TIME=$$(date +%s); \
+    conda run --no-capture-output -n $(conda_env) python -u -m $(2) 2>&1 | tee -a $$LOG_FILE; \
+    EXIT_CODE=$${PIPESTATUS[0]}; \
+    END_TIME=$$(date +%s); \
+    ELAPSED=$$(($$END_TIME - $$START_TIME)); \
+    MINUTES=$$(($$ELAPSED / 60)); \
+    SECONDS=$$(($$ELAPSED % 60)); \
+    if [ $$EXIT_CODE -eq 0 ]; then STATUS="SUCCESS"; else STATUS="FAILED"; fi; \
+	echo "" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    echo "" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE; \
+    echo "Finished Step | $(1)" | tee -a $$LOG_FILE; \
+    echo "Status        | $$STATUS" | tee -a $$LOG_FILE; \
+    echo "Duration      | $$ELAPSED seconds ($${MINUTES}m $${SECONDS}s)" | tee -a $$LOG_FILE; \
+    echo "Exit Code     | $$EXIT_CODE" | tee -a $$LOG_FILE; \
+    echo "====================================================================================================" | tee -a $$LOG_FILE
+endef
+
 # ===================================
 # DATA PREPROCESSING
 # ===================================
 preprocess_data:
-	mkdir -p logs/pipeline
-	@echo CONFIGURATIONS | tee -a logs/pipeline/preprocess_data.log
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/preprocess_data.log
-	@tail -n +1 src/config/* 2>/dev/null | tee -a logs/pipeline/preprocess_data.log || true
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/preprocess_data.log
-	conda run --no-capture-output -n $(conda_env) python -u -m src.data.preprocess 2>&1 | tee -a logs/pipeline/preprocess_data.log
+	$(call run_pipeline_step,preprocess_data,src.data.preprocess)
 
 # ===================================
 # EMISSION DATA ENRICHMENT
 # ===================================
 enrich_data_with_emissions:
-	mkdir -p logs/pipeline
-	@echo CONFIGURATIONS | tee -a logs/pipeline/enrich_data_with_emissions.log
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/enrich_data_with_emissions.log
-	@tail -n +1 src/config/* 2>/dev/null | tee -a logs/pipeline/enrich_data_with_emissions.log || true
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/enrich_data_with_emissions.log
-	conda run --no-capture-output -n $(conda_env) python -u -m src.data.enrich_with_emissions 2>&1 | tee -a logs/pipeline/enrich_data_with_emissions.log
+	$(call run_pipeline_step,enrich_data_with_emissions,src.data.enrich_with_emissions)
 
 # ===================================
 # MODEL TRAINING
 # ===================================
 train_recsys:
-	mkdir -p logs/pipeline
-	@echo CONFIGURATIONS | tee -a logs/pipeline/train_recsys.log
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/train_recsys.log
-	@tail -n +1 src/config/* 2>/dev/null | tee -a logs/pipeline/train_recsys.log || true
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/train_recsys.log
-	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.train 2>&1 | tee -a logs/pipeline/train_recsys.log
+	$(call run_pipeline_step,train_recsys,src.modeling.train)
 
 # ===================================
 # MODEL INFERENCE
@@ -40,20 +77,10 @@ train_recsys:
 # RE-RANKING
 # ===================================
 predict_recommendations:
-	mkdir -p logs/pipeline
-	@echo CONFIGURATIONS | tee -a logs/pipeline/predict_recommendations.log
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/predict_recommendations.log
-	@tail -n +1 src/config/* 2>/dev/null | tee -a logs/pipeline/predict_recommendations.log || true
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/predict_recommendations.log
-	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.predict 2>&1 | tee -a logs/pipeline/predict_recommendations.log
+	$(call run_pipeline_step,predict_recommendations,src.modeling.predict)
 
 # ===================================
 # MODEL EVALUATION
 # ===================================
 evaluate_recsys:
-	mkdir -p logs/pipeline
-	@echo CONFIGURATIONS | tee -a logs/pipeline/evaluate_recsys.log
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/evaluate_recsys.log
-	@tail -n +1 src/config/* 2>/dev/null | tee -a logs/pipeline/evaluate_recsys.log || true
-	@python -c "print('*' * 100)" | tee -a logs/pipeline/evaluate_recsys.log
-	conda run --no-capture-output -n $(conda_env) python -u -m src.modeling.evaluate 2>&1 | tee -a logs/pipeline/evaluate_recsys.log
+	$(call run_pipeline_step,evaluate_recsys,src.modeling.evaluate)
