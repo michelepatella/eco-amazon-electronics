@@ -5,7 +5,7 @@ emissions_enrichment:
   # Type: int
   # Constraints: > 0
   # -------------------------------------------------------------------------------------
-  num_estimates_per_product: 4
+  num_estimates_per_product: 1
 
   # -------------------------------------------------------------------------------------
   # Description: The maximum number of concurrent requests to the enrichment system.
@@ -26,7 +26,7 @@ emissions_enrichment:
   # Type: bool
   # Constraints: True or False
   # -------------------------------------------------------------------------------------
-  compare_with_baseline: true
+  compare_with_baseline: false
 
   # -------------------------------------------------------------------------------------
   # Description: The LLM to use for enrichment process.
@@ -75,4 +75,4 @@ emissions_enrichment:
   # Type: str
   # Constraints: Valid directory path
   # -------------------------------------------------------------------------------------
-  logs_dir: "logs/ground_truth/google_genai:gemini-2.5-flash"
+  logs_dir: "logs/reco2gnizer/ground_truths/google_genai:gemini-2.5-flash/electronics"
