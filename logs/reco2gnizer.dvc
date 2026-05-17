@@ -1,6 +1,6 @@
 outs:
-- md5: d751713988987e9331980363e24189ce.dir
-  size: 0
-  nfiles: 0
+- md5: a4c84a91be4941c0da81cf44c8d2e674.dir
+  size: 3924976
+  nfiles: 200
   hash: md5
   path: reco2gnizer
