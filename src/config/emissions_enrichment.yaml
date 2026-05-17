@@ -26,7 +26,7 @@ emissions_enrichment:
   # Type: bool
   # Constraints: True or False
   # -------------------------------------------------------------------------------------
-  compare_with_baseline: false
+  compare_with_baseline: true
 
   # -------------------------------------------------------------------------------------
   # Description: The LLM to use for enrichment process.
