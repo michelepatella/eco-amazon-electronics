@@ -8,7 +8,6 @@ import hashlib
 import os
 import shutil
 
-import pandas as pd
 import ray
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
@@ -113,9 +112,6 @@ def _trainable(
     Returns:
         None
     """
-    print(
-        f"Trainable start: model={model}, dataset={dataset}, enable_tune={enable_tune}",
-    )
     # Filter hyperparameters based on model's supported parameters
     supported_params = MODEL_SUPPORTED_PARAMS.get(model, set())
     filtered_config = {
@@ -139,17 +135,12 @@ def _trainable(
     # Add data path and checkpoint directory to the config
     final_config["data_path"] = data_path
     final_config["checkpoint_dir"] = unique_checkpoint_dir
-    print(f"Using checkpoint dir: {unique_checkpoint_dir}")
 
     # Train the model
     result = run_recbole(
         dataset=dataset,
         model=model,
         config_dict=final_config,
-    )
-
-    print(
-        f"Finished training model={model}; best_valid_score={result.get('best_valid_score')}",
     )
 
     # Keep track of the best validation score
@@ -191,21 +182,15 @@ def train_recsys() -> None:
             logging_format=config["ray_tune"]["logging_format"],
             log_to_driver=config["ray_tune"]["log_to_driver"],
         )
-        print("Ray initialized")
 
     # Define parameter space for Ray Tune
     param_space = {k: tune.choice(v) for k, v in config["param_space"].items()}
-
-    print(f"Starting hyperparameter tuning for models: {SUPPORTED_MODELS}")
 
     # Find best hyperparameters for each model
     tuning_results = {}
     for model in SUPPORTED_MODELS:
         # Get checkpoint directory
         checkpoint_dir = checkpoint_dirs[model]
-        print(
-            f"Starting tuning for model={model}, checkpoint_dir={checkpoint_dir}",
-        )
 
         # Define a scheduler
         scheduler = ASHAScheduler(
@@ -241,29 +226,13 @@ def train_recsys() -> None:
         )
         res = tuner.fit()
         tuning_results[model] = res
-        try:
-            best = res.get_best_result()
-            best_score = (
-                best.metrics.get(TUNING_VAL_METRIC["name"])
-                if hasattr(best, "metrics")
-                else None
-            )
-            print(
-                f"Finished tuning {model}: best_{TUNING_VAL_METRIC['name']}={best_score}",
-            )
-        except Exception as e:
-            print(
-                f"Tuning finished for {model}, but couldn't read best result: {e}",
-            )
 
     # Shutdown Ray after tuning is complete
     ray.shutdown()
-    print("Ray shutdown")
 
     # Clean up any temporary checkpoint directories created during tuning
     for model in SUPPORTED_MODELS:
         checkpoint_root = checkpoint_dirs[model]
-        print(f"Cleaning checkpoint root: {checkpoint_root}")
         for name in os.listdir(checkpoint_root):
             path = os.path.join(checkpoint_root, name)
             if path in keep_dirs:
@@ -279,7 +248,6 @@ def train_recsys() -> None:
         # Get checkpoint directory
         checkpoint_dir = checkpoint_dirs[model]
 
-        print(f"Retraining model={model} with best hyperparameters")
         # Retrain the model with its best hyperparameters found
         _trainable(
             config=best_config,
@@ -302,57 +270,6 @@ def train_recsys() -> None:
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
         os.replace(ckpt, target_path)
         print(f"Saved final model for {model} to {target_path}")
-
-    # Print training summary
-    print("\n" + "=" * 140)
-    print("Training Summary")
-    print("=" * 140)
-
-    summary_data = []
-    for model in SUPPORTED_MODELS:
-        best_result = tuning_results[model].get_best_result()
-        best_config = best_result.config
-        best_score = (
-            best_result.metrics.get(TUNING_VAL_METRIC["name"])
-            if hasattr(best_result, "metrics")
-            else "N/A"
-        )
-
-        # Get supported params for this model
-        supported_params = MODEL_SUPPORTED_PARAMS.get(model, set())
-        best_hparams = {
-            k: v for k, v in best_config.items() if k in supported_params
-        }
-
-        summary_data.append(
-            {
-                "Model": model,
-                "Best Score": f"{best_score:.6f}"
-                if isinstance(best_score, float)
-                else best_score,
-                "Num Trials": len(tuning_results[model]),
-                "Best Hyperparameters": str(best_hparams),
-                "Model Path": model_registry[model]["model_path"],
-            },
-        )
-
-    summary_df = pd.DataFrame(summary_data)
-    print(summary_df.to_string(index=False))
-
-    # Print additional details
-    print("\n" + "-" * 140)
-    print("Detailed Best Hyperparameters per Model:")
-    print("-" * 140)
-    for model in SUPPORTED_MODELS:
-        best_result = tuning_results[model].get_best_result()
-        best_config = best_result.config
-        supported_params = MODEL_SUPPORTED_PARAMS.get(model, set())
-        best_hparams = {
-            k: v for k, v in best_config.items() if k in supported_params
-        }
-        print(f"\n{model}:")
-        for param, value in sorted(best_hparams.items()):
-            print(f"  {param}: {value}")
 
 
 if __name__ == "__main__":
