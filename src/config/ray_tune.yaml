@@ -11,14 +11,14 @@ ray_tune:
   # Type: int
   # Constraints: > 0
   # ------------------------------------------------------------------------------------
-  num_cpus: 4
+  num_cpus: 2
 
   # ------------------------------------------------------------------------------------
   # Description: Number of GPU devices to allocate to Ray cluster
   # Type: int
   # Constraints: >= 0
   # ------------------------------------------------------------------------------------
-  num_gpus: 2
+  num_gpus: 0
 
   # ------------------------------------------------------------------------------------
   # Description: Whether to ignore errors when reinitializing Ray
@@ -95,7 +95,7 @@ ray_tune:
   # Type: int
   # Constraints: > 0
   # ------------------------------------------------------------------------------------
-  max_t: 300
+  max_t: 20
 
   # ------------------------------------------------------------------------------------
   # Description: Minimum number of epochs before stopping underperforming trials

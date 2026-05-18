@@ -11,7 +11,7 @@ recbole:
   # Type: int
   # Constraints: >= 0
   # ------------------------------------------------------------------------------------
-  worker: 4
+  worker: 0
 
   # ------------------------------------------------------------------------------------
   # Description: Random seed for reproducible results
@@ -89,7 +89,7 @@ recbole:
   # Type: int
   # Constraints: > 0
   # ------------------------------------------------------------------------------------
-  epochs: 300
+  epochs: 50
 
   # ------------------------------------------------------------------------------------
   # Description: Optimization algorithm for training
@@ -132,14 +132,14 @@ recbole:
   # Type: int
   # Constraints: > 0
   # ------------------------------------------------------------------------------------
-  eval_step: 1
+  eval_step: 5
 
   # ------------------------------------------------------------------------------------
   # Description: Early stopping patience (stop after N epochs without improvement)
   # Type: int
   # Constraints: > 0
   # ------------------------------------------------------------------------------------
-  stopping_step: 10
+  stopping_step: 5
 
   # ------------------------------------------------------------------------------------
   # Description: Maximum norm for gradient clipping during training
@@ -245,7 +245,7 @@ recbole:
   # Type: str
   # Constraints: "cpu", "cuda", "mps"
   # ------------------------------------------------------------------------------------
-  device: "mps"
+  device: "cpu"
 
   # ------------------------------------------------------------------------------------
   # Description: Ratio of tail items to consider in TailPercentage metric calculation
