@@ -11,14 +11,14 @@ ray_tune:
   # Type: int
   # Constraints: > 0
   # ------------------------------------------------------------------------------------
-  num_cpus: 8
+  num_cpus: 4
 
   # ------------------------------------------------------------------------------------
   # Description: Number of GPU devices to allocate to Ray cluster
   # Type: int
   # Constraints: >= 0
   # ------------------------------------------------------------------------------------
-  num_gpus: 1
+  num_gpus: 2
 
   # ------------------------------------------------------------------------------------
   # Description: Whether to ignore errors when reinitializing Ray
