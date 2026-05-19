@@ -5,6 +5,7 @@ Train RecBole models with hyperparameter tuning.
 
 import glob
 import hashlib
+import json
 import os
 import shutil
 
@@ -21,6 +22,7 @@ from src.const import (
     MODEL_NAME_BPR,
     MODEL_NAME_LIGHTGCN,
     MODEL_SUPPORTED_PARAMS,
+    MODELS_BEST_PARAMS_FILE_NAME,
     MODELS_ELEC_BPR_DIR,
     MODELS_ELEC_BPR_PATH,
     MODELS_ELEC_BPR_PREDS_DIR,
@@ -186,11 +188,24 @@ def train_recsys() -> None:
     # Define parameter space for Ray Tune
     param_space = {k: tune.choice(v) for k, v in config["param_space"].items()}
 
-    # Find best hyperparameters for each model
-    tuning_results = {}
+    # Find best hyperparameters for each model via Ray Tune (or load from existing JSON)
+    best_hyperparams = {}
     for model in SUPPORTED_MODELS:
         # Get checkpoint directory
         checkpoint_dir = checkpoint_dirs[model]
+        os.makedirs(checkpoint_dir, exist_ok=True)
+
+        # Path to JSON with best params stored in the model root
+        best_params_path = os.path.join(
+            checkpoint_dir,
+            MODELS_BEST_PARAMS_FILE_NAME,
+        )
+
+        # If a JSON with best params already exists, load and skip HPO for this model
+        if os.path.exists(best_params_path):
+            with open(best_params_path) as fh:
+                best_hyperparams[model] = json.load(fh)
+            continue
 
         # Define a scheduler
         scheduler = ASHAScheduler(
@@ -225,7 +240,13 @@ def train_recsys() -> None:
             ),
         )
         res = tuner.fit()
-        tuning_results[model] = res
+
+        # Extract best config and filter to supported params
+        best_config = res.get_best_result().config
+        supported_params = MODEL_SUPPORTED_PARAMS.get(model, set())
+        best_hyperparams[model] = {
+            k: v for k, v in best_config.items() if k in supported_params
+        }
 
     # Shutdown Ray after tuning is complete
     ray.shutdown()
@@ -240,15 +261,15 @@ def train_recsys() -> None:
             if os.path.isdir(path):
                 shutil.rmtree(path)
 
-    # Final training for each model with the best hyperparameters found
+    # Final training for each model with the best hyperparameters (from JSON or HPO)
     for model in SUPPORTED_MODELS:
         # Get the best hyperparameters for the current model
-        best_config = tuning_results[model].get_best_result().config
+        best_config = best_hyperparams.get(model, {})
 
         # Get checkpoint directory
         checkpoint_dir = checkpoint_dirs[model]
 
-        # Retrain the model with its best hyperparameters found
+        # Retrain the model with its best hyperparameters found or loaded
         _trainable(
             config=best_config,
             base_config=config["recbole"],
@@ -269,7 +290,6 @@ def train_recsys() -> None:
         target_path = os.path.abspath(model_registry[model]["model_path"])
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
         os.replace(ckpt, target_path)
-        print(f"Saved final model for {model} to {target_path}")
 
 
 if __name__ == "__main__":
