@@ -1,0 +1,5 @@
+outs:
+- md5: c079079ac90952722134c5f3d730873a
+  size: 25521467
+  hash: md5
+  path: BPR.pth

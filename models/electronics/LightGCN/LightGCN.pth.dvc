@@ -1,0 +1,5 @@
+outs:
+- md5: fadba988075517d1cf139116c48c31c4
+  size: 68041107
+  hash: md5
+  path: LightGCN.pth
