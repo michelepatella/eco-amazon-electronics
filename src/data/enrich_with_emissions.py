@@ -20,11 +20,19 @@ from tqdm.asyncio import tqdm
 from src.const import (
     DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
     DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
+    DATA_PROCESSED_GT_G25F_CLOTH_PATH,
     DATA_PROCESSED_GT_G25F_ELEC_PATH,
+    DATA_PROCESSED_GT_G25F_HK_PATH,
+    DATA_PROCESSED_GT_O3M_CLOTH_PATH,
     DATA_PROCESSED_GT_O3M_ELEC_PATH,
+    DATA_PROCESSED_GT_O3M_HK_PATH,
     DATA_RAW_AR23_IM_ELEC_PATH,
+    DATA_RAW_GT_CLOTH_PATH,
     DATA_RAW_GT_ELEC_PATH,
+    DATA_RAW_GT_HK_PATH,
+    DATASET_NAME_CLOTH,
     DATASET_NAME_ELEC,
+    DATASET_NAME_HK,
     LLM_NAME_G25F,
     LLM_NAME_O3M,
     SUPPORTED_DATASETS,
@@ -41,8 +49,25 @@ config = load_config()
 assert config["dataset"]["name"] in SUPPORTED_DATASETS, (
     f"Supported dataset: {SUPPORTED_DATASETS}, got: {config['dataset']['name']}"
 )
+
+# Determine data type first
+data_type = (
+    "ground_truth"
+    if config["emissions_enrichment"]["is_ground_truth"]
+    else "item_metadata"
+)
+
+if data_type == "item_metadata" and config["dataset"]["name"] in [
+    DATASET_NAME_CLOTH,
+    DATASET_NAME_HK,
+]:
+    raise ValueError(
+        f"Item metadata is only supported for {DATASET_NAME_ELEC}. "
+        f"Use ground_truth for {DATASET_NAME_CLOTH} and {DATASET_NAME_HK}.",
+    )
+
+# Map data types and models to their raw and processed paths
 if config["dataset"]["name"] == DATASET_NAME_ELEC:
-    # Map data types and models to their raw and processed paths
     path_registry = {
         "ground_truth": {
             LLM_NAME_G25F: {
@@ -65,13 +90,32 @@ if config["dataset"]["name"] == DATASET_NAME_ELEC:
             },
         },
     }
-
-# Determine data type
-data_type = (
-    "ground_truth"
-    if config["emissions_enrichment"]["is_ground_truth"]
-    else "item_metadata"
-)
+elif config["dataset"]["name"] == DATASET_NAME_CLOTH:
+    path_registry = {
+        "ground_truth": {
+            LLM_NAME_G25F: {
+                "raw_path": DATA_RAW_GT_CLOTH_PATH,
+                "processed_path": DATA_PROCESSED_GT_G25F_CLOTH_PATH,
+            },
+            LLM_NAME_O3M: {
+                "raw_path": DATA_RAW_GT_CLOTH_PATH,
+                "processed_path": DATA_PROCESSED_GT_O3M_CLOTH_PATH,
+            },
+        },
+    }
+elif config["dataset"]["name"] == DATASET_NAME_HK:
+    path_registry = {
+        "ground_truth": {
+            LLM_NAME_G25F: {
+                "raw_path": DATA_RAW_GT_HK_PATH,
+                "processed_path": DATA_PROCESSED_GT_G25F_HK_PATH,
+            },
+            LLM_NAME_O3M: {
+                "raw_path": DATA_RAW_GT_HK_PATH,
+                "processed_path": DATA_PROCESSED_GT_O3M_HK_PATH,
+            },
+        },
+    }
 
 # Determine model
 model = config["emissions_enrichment"]["model"]
