@@ -10,7 +10,7 @@ Project constants.
 # Dataset names
 DATASET_NAME_ELEC = "electronics"
 DATASET_NAME_CLOTH = "clothing"
-DATASET_NAME_HK = "h&k"
+DATASET_NAME_HK = "home_and_kitchen"
 
 # Supported datasets
 SUPPORTED_DATASETS = [DATASET_NAME_ELEC, DATASET_NAME_CLOTH, DATASET_NAME_HK]
