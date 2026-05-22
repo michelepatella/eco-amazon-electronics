@@ -1,5 +1,5 @@
 outs:
-- md5: d41d8cd98f00b204e9800998ecf8427e
-  size: 0
+- md5: a805ca3d6bb0ed4cb5b91870a0e332db
+  size: 38436
   hash: md5
   path: clothing.jsonl
