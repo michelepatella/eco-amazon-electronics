@@ -40,7 +40,7 @@ emissions_enrichment:
   # Type: float
   # Constraints: >= 0.0 and <= 1.0
   # -------------------------------------------------------------------------------------
-  model_temperature: null
+  model_temperature: 0.0
 
   # -------------------------------------------------------------------------------------
   # Description: The maximum number of web search results to retrieve during enrichment.
@@ -75,4 +75,4 @@ emissions_enrichment:
   # Type: str
   # Constraints: Valid directory path
   # -------------------------------------------------------------------------------------
-  logs_dir: "logs/reco2gnizer/ground_truths/google_genai:gemini-2.5-flash/electronics"
+  logs_dir: "logs/reco2gnizer/ground_truths/google_genai:gemini-2.5-flash/clothing"

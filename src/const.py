@@ -9,9 +9,11 @@ Project constants.
 
 # Dataset names
 DATASET_NAME_ELEC = "electronics"
+DATASET_NAME_CLOTH = "clothing"
+DATASET_NAME_HK = "h&k"
 
 # Supported datasets
-SUPPORTED_DATASETS = [DATASET_NAME_ELEC]
+SUPPORTED_DATASETS = [DATASET_NAME_ELEC, DATASET_NAME_CLOTH, DATASET_NAME_HK]
 
 # Dataset raw user reviews columns
 DATASET_RAW_UR_USER_ID_COL = "user_id"
