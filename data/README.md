@@ -37,6 +37,6 @@ dvc pull
 | `ground_truths/google_genai:gemini-2.5-flash/electronics.jsonl` | JSONL | Gemini 2.5 Flash enrichment | 303 KB | 198 | `title`, `co2e_kg` | Items with known PCF values enriched with Gemini 2.5 Flash estimates |
 | `ground_truths/google_genai:gemini-2.5-flash/clothing.jsonl` | JSONL | Gemini 2.5 Flash enrichment | 324 KB | 198 | `title`, `co2e_kg` | Items with known PCF values enriched with Gemini 2.5 Flash estimates |
 | `ground_truths/google_genai:gemini-2.5-flash/home_and_kitchen.jsonl` | JSONL | Gemini 2.5 Flash enrichment | 300 KB | 198 | `title`, `co2e_kg` | Items with known PCF values enriched with Gemini 2.5 Flash estimates |
-| `ground_truths/openai:o3-mini/electronics.jsonl` | JSONL | OpenAI o3-mini enrichment | - | 198 | `title`, `co2e_kg` | Items with known PCF values enriched with OpenAI o3-mini estimates |
+| `ground_truths/openai:o3-mini/electronics.jsonl` | JSONL | OpenAI o3-mini enrichment | 230 KB | 198 | `title`, `co2e_kg` | Items with known PCF values enriched with OpenAI o3-mini estimates |
 | `ground_truths/openai:o3-mini/clothing.jsonl` | JSONL | OpenAI o3-mini enrichment | - | 198 | `title`, `co2e_kg` | Items with known PCF values enriched with OpenAI o3-mini estimates |
 | `ground_truths/openai:o3-mini/home_and_kitchen.jsonl` | JSONL | OpenAI o3-mini enrichment | - | 198 | `title`, `co2e_kg` | Items with known PCF values enriched with OpenAI o3-mini estimates |
