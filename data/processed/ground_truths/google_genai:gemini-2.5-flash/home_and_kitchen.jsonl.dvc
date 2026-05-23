@@ -1,5 +1,5 @@
 outs:
-- md5: d41d8cd98f00b204e9800998ecf8427e
-  size: 0
+- md5: 0e8d8cbee4cd0660a415b1a33d24f847
+  size: 299855
   hash: md5
   path: home_and_kitchen.jsonl
