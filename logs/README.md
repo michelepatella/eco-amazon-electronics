@@ -18,9 +18,7 @@ dvc pull
 ├── reco2gnizer                                     <- All agent execution logs
 │   ├── amazon_reviews_23
 │   │   └── item_metadata
-│   │       ├── google_genai:gemini-2.5-flash
-│   │       │   └── electronics
-│   │       └── openai:o3-mini
+│   │       └── google_genai:gemini-2.5-flash
 │   │           └── electronics
 │   └── ground_truths
 │       ├── google_genai:gemini-2.5-flash

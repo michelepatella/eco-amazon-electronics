@@ -19,7 +19,6 @@ from tqdm.asyncio import tqdm
 
 from src.const import (
     DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
-    DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
     DATA_PROCESSED_GT_G25F_CLOTH_PATH,
     DATA_PROCESSED_GT_G25F_ELEC_PATH,
     DATA_PROCESSED_GT_G25F_HK_PATH,
@@ -83,10 +82,6 @@ if config["dataset"]["name"] == DATASET_NAME_ELEC:
             LLM_NAME_G25F: {
                 "raw_path": DATA_RAW_AR23_IM_ELEC_PATH,
                 "processed_path": DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
-            },
-            LLM_NAME_O3M: {
-                "raw_path": DATA_RAW_AR23_IM_ELEC_PATH,
-                "processed_path": DATA_PROCESSED_AR23_IM_O3M_ELEC_PATH,
             },
         },
     }
