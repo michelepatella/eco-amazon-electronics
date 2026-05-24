@@ -1,5 +1,5 @@
 outs:
-- md5: 2d5329612aed0b6e109b75f02318534f
-  size: 40647
+- md5: bc1ea8933f93d225b18b383bc22f3041
+  size: 39796
   hash: md5
   path: electronics.jsonl

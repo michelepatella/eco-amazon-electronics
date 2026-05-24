@@ -33,7 +33,7 @@ emissions_enrichment:
   # Type: str
   # Constraints: <provider_name>:<model_name>
   # -------------------------------------------------------------------------------------
-  model: "openai:o3-mini"
+  model: "google_genai:gemini-2.5-flash"
 
   # -------------------------------------------------------------------------------------
   # Description: The temperature setting for the LLM during enrichment.
@@ -75,4 +75,4 @@ emissions_enrichment:
   # Type: str
   # Constraints: Valid directory path
   # -------------------------------------------------------------------------------------
-  logs_dir: "logs/reco2gnizer/ground_truths/openai:o3-mini/clothing"
+  logs_dir: "logs/reco2gnizer/ground_truths/google_genai:gemini-2.5-flash/electronics"

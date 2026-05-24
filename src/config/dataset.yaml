@@ -4,4 +4,4 @@ dataset:
   # Type: str
   # Constraints: One of the supported datasets (see src/const.py, SUPPORTED_DATASETS)
   # ------------------------------------------------------------------------------------
-  name: "clothing"
+  name: "electronics"
