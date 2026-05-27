@@ -75,4 +75,4 @@ emissions_enrichment:
   # Type: str
   # Constraints: Valid directory path
   # -------------------------------------------------------------------------------------
-  logs_dir: "logs/reco2gnizer/ground_truths/google_genai:gemini-2.5-flash/electronics"
+  logs_dir: "logs/reco2gnizer/amazon_reviews_23/item_metadata/google_genai:gemini-2.5-flash/electronics"
