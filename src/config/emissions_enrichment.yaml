@@ -5,7 +5,7 @@ emissions_enrichment:
   # Type: int
   # Constraints: > 0
   # -------------------------------------------------------------------------------------
-  num_estimates_per_product: 4
+  num_estimates_per_product: 1
 
   # -------------------------------------------------------------------------------------
   # Description: The maximum number of concurrent requests to the enrichment system.
@@ -19,14 +19,14 @@ emissions_enrichment:
   # Type: bool
   # Constraints: True or False
   # -------------------------------------------------------------------------------------
-  is_ground_truth: true
+  is_ground_truth: false
 
   # -------------------------------------------------------------------------------------
   # Description: Whether to compare the current estimates with baseline estimates.
   # Type: bool
   # Constraints: True or False
   # -------------------------------------------------------------------------------------
-  compare_with_baseline: true
+  compare_with_baseline: false
 
   # -------------------------------------------------------------------------------------
   # Description: The LLM to use for enrichment process.
@@ -40,7 +40,7 @@ emissions_enrichment:
   # Type: float
   # Constraints: >= 0.0 and <= 1.0
   # -------------------------------------------------------------------------------------
-  model_temperature: null
+  model_temperature: 0.0
 
   # -------------------------------------------------------------------------------------
   # Description: The maximum number of web search results to retrieve during enrichment.
