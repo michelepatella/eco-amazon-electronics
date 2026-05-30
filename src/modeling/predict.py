@@ -381,31 +381,23 @@ def predict_recommendations() -> None:
         None
     """
     # Load models and dataset
-    print(
-        f"Prediction start: top_k={config['inference']['top_k']}, models={SUPPORTED_MODELS}, llms={SUPPORTED_LLMS}",
-    )
     models_bundle = {}
     for model in SUPPORTED_MODELS:
         models_bundle[model] = load_data_and_model(
             model_file=model_registry[model]["model_path"],
         )
-    print(
-        f"Loaded models: {[(m, model_registry[m]['model_path']) for m in SUPPORTED_MODELS]}",
-    )
 
     # Load emission data
-    emission_data = {
-        llm: {
-            d["parent_asin"]: d["co2e_kg"]["value"]
-            for d in load_jsonl(emission_data_paths[llm])
-            if d["co2e_kg"] and d["co2e_kg"]["value"] is not None
-        }
-        for llm in SUPPORTED_LLMS
-    }
+    emission_data = {}
     for llm in SUPPORTED_LLMS:
-        print(
-            f"Emission data loaded for {llm}: {len(emission_data[llm])} items",
-        )
+        try:
+            emission_data[llm] = {
+                d["parent_asin"]: d["co2e_kg"]["value"]
+                for d in load_jsonl(emission_data_paths[llm])
+                if d["co2e_kg"] and d["co2e_kg"]["value"] is not None
+            }
+        except Exception:
+            emission_data[llm] = {}
 
     # Load (Item Index, Parent ASIN) mapping
     item_map_df = pd.read_csv(DATA_INTERIM_MAPS_IMAP_PATH, sep="\t")
@@ -414,9 +406,6 @@ def predict_recommendations() -> None:
             item_map_df["item_index"],
             item_map_df["parent_asin"],
         ),
-    )
-    print(
-        f"Item map loaded: {len(item_map)} entries from {DATA_INTERIM_MAPS_IMAP_PATH}",
     )
 
     # Compute top-k recommendations
@@ -435,15 +424,13 @@ def predict_recommendations() -> None:
             "item_ids": item_ids,
             "user_ids": user_ids,
         }
-        try:
-            print(
-                f"Computed top-{config['inference']['top_k']} for {model}: scores={scores.shape}, items={item_ids.shape}, users={len(user_ids)}",
-            )
-        except Exception:
-            print(f"Computed top-k for {model}: users={len(user_ids)}")
 
     # Re-rank recommendations varying the alpha parameter
     for llm in SUPPORTED_LLMS:
+        # Skip LLM if emission data is not available
+        if not emission_data.get(llm):
+            continue
+
         for model in SUPPORTED_MODELS:
             # Get the pre-computed scores and item IDs for the current model
             scores = recommendations[model]["scores"]
@@ -477,14 +464,9 @@ def predict_recommendations() -> None:
                     results,
                     model_registry[model]["preds_paths"][llm][alpha],
                 )
-                print(
-                    f"Saved predictions: {model_registry[model]['preds_paths'][llm][alpha]}",
-                )
 
     # Print summary of saved predictions
-    print("\n" + "=" * 160)
-    print("Prediction Summary")
-    print("=" * 160)
+    print("Predict Recommendations Summary")
 
     summary_data = []
     total_predictions = 0
@@ -529,13 +511,6 @@ def predict_recommendations() -> None:
 
     summary_df = pd.DataFrame(summary_data)
     print(summary_df.to_string(index=False))
-
-    print("\n" + "=" * 160)
-    print(f"Total prediction entries generated: {total_predictions}")
-    print(
-        f"Total configurations saved: {len(SUPPORTED_MODELS) * len(SUPPORTED_LLMS) * len(SUPPORTED_RERANKING_ALPHAS)}",
-    )
-    print("=" * 160 + "\n")
 
 
 if __name__ == "__main__":
