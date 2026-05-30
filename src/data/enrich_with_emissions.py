@@ -753,6 +753,8 @@ async def enrich_data_with_emissions() -> None:
                     if w
                 ],
             )
+            # Truncate safe_title to avoid filesystem filename length limits
+            safe_title = safe_title[:200]
             log_suffix = f"({run_idx + 1})" if runs_needed > 1 else ""
 
             task = asyncio.create_task(
