@@ -11,7 +11,7 @@ from recbole.evaluator import Evaluator
 from recbole.quick_start import load_data_and_model
 from tqdm import tqdm
 
-from const import (
+from src.const import (
     DATA_INTERIM_MAPS_IMAP_PATH,
     DATA_PROCESSED_AR23_IM_G25F_ELEC_PATH,
     DATASET_NAME_ELEC,
