@@ -1,0 +1,5 @@
+outs:
+- md5: c419256e07e61808f2530f60b7b7b67d
+  size: 24940729
+  hash: md5
+  path: alpha_0_5.pth
