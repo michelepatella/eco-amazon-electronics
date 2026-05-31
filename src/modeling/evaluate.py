@@ -280,15 +280,13 @@ def evaluate_recsys() -> None:
     print(f"Loaded {len(SUPPORTED_MODELS)} models")
 
     # Load emission data
-    emission_data = {
-        llm: {
+    emission_data = {}
+    for llm in emission_data_paths:
+        emission_data[llm] = {
             d["parent_asin"]: d["co2e_kg"]["value"]
             for d in load_jsonl(emission_data_paths[llm])
             if d["co2e_kg"] and d["co2e_kg"]["value"] is not None
         }
-        for llm in SUPPORTED_LLMS
-    }
-    for llm in SUPPORTED_LLMS:
         print(
             f"Emission data loaded for {llm}: {len(emission_data[llm])} items",
         )
