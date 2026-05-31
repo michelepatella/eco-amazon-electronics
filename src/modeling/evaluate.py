@@ -332,7 +332,7 @@ def evaluate_recsys() -> None:
                             top_k=top_k,
                             dataset=dataset,
                             item_map=item_map,
-                            emission_data=emission_data,
+                            emission_data=emission_data.get(llm, {}),
                             item_popularity=item_popularity,
                             config=config["recbole"],
                         )
