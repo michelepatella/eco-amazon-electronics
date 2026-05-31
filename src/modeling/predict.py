@@ -99,6 +99,8 @@ def _compute_sas_scores(
     dataset: Dataset,
     item_map: dict,
     alpha: float,
+    global_min_emission: float,
+    global_max_emission: float,
 ) -> np.ndarray:
     """Re-ranks a list of recommended items using a sustainability-aware scoring
     (SaS) function.
@@ -134,6 +136,12 @@ def _compute_sas_scores(
             Weighting factor controlling the trade-off between recommendation
             relevance and sustainability.
 
+        global_min_emission (float):
+            Minimum emission value across all items, used for normalization.
+
+        global_max_emission (float):
+            Maximum emission value across all items, used for normalization.
+
     Returns:
         np.ndarray:
             Array containing the re-ranked internal item IDs ordered
@@ -153,13 +161,19 @@ def _compute_sas_scores(
     )
 
     # Normalize emission values (min-max normalization)
-    emission_values_norm = (emission_values.max() - emission_values) / (
-        emission_values.max() - emission_values.min()
-    )
+    if global_max_emission != global_min_emission:
+        emission_values_norm = (global_max_emission - emission_values) / (
+            global_max_emission - global_min_emission
+        )
+    else:
+        emission_values_norm = np.zeros_like(emission_values)
 
     # Normalize recommendation scores (min-max normalization)
     scores = np.array(scores)
-    scores_norm = (scores - scores.min()) / (scores.max() - scores.min())
+    if scores.max() != scores.min():
+        scores_norm = (scores - scores.min()) / (scores.max() - scores.min())
+    else:
+        scores_norm = np.zeros_like(scores)
 
     # Compute sustainability-aware scores
     sas_scores = alpha * scores_norm + (1 - alpha) * emission_values_norm
@@ -261,6 +275,8 @@ def _rerank_top_k_recommendations(
     emission_data: dict,
     alpha: float,
     top_k: int,
+    global_min_emission: float,
+    global_max_emission: float,
 ):
     """Re-ranks top-K item recommendations using a sustainability-aware scoring function
     and computes evaluation signals against ground truth interactions.
@@ -306,6 +322,12 @@ def _rerank_top_k_recommendations(
         top_k (int):
             Number of items to keep in the final reranked recommendation list.
 
+        global_min_emission (float):
+            Minimum emission value across all items, used for normalization.
+
+        global_max_emission (float):
+            Maximum emission value across all items, used for normalization.
+
     Returns:
         tuple:
             - pos_matrix (list[list[int]]):
@@ -346,6 +368,8 @@ def _rerank_top_k_recommendations(
             dataset=dataset,
             item_map=item_map,
             alpha=alpha,
+            global_min_emission=global_min_emission,
+            global_max_emission=global_max_emission,
         )
 
         # Keep track of the top-k re-ranked items for the current user
@@ -431,6 +455,12 @@ def predict_recommendations() -> None:
         if not emission_data.get(llm):
             continue
 
+        # Compute global min and max emission values for normalization
+        # across all items
+        all_emissions = list(emission_data[llm].values())
+        global_min_emission = min(all_emissions) if all_emissions else 0
+        global_max_emission = max(all_emissions) if all_emissions else 1
+
         for model in SUPPORTED_MODELS:
             # Get the pre-computed scores and item IDs for the current model
             scores = recommendations[model]["scores"]
@@ -449,6 +479,8 @@ def predict_recommendations() -> None:
                         emission_data=emission_data[llm],
                         alpha=alpha,
                         top_k=config["inference"]["top_k"],
+                        global_min_emission=global_min_emission,
+                        global_max_emission=global_max_emission,
                     )
                 )
 
