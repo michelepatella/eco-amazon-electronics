@@ -182,7 +182,11 @@ def _compute_sas_scores(
         scores_norm = np.zeros_like(scores)
 
     # Compute sustainability-aware scores
-    sas_scores = alpha * scores_norm + (1 - alpha) * emission_values_norm
+    if alpha == RERANKING_ALPHA_PURE:
+        sas_scores = scores_norm
+    else:
+        emission_values_norm = np.power(emission_values_norm, 2)
+        sas_scores = alpha * scores_norm + (1 - alpha) * emission_values_norm
 
     # Sort items by sustainability-aware score in descending order
     sas_scores_sorted = np.argsort(sas_scores)[::-1]
