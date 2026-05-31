@@ -33,7 +33,6 @@ from src.const import (
     RERANKING_ALPHA_REL,
     RERANKING_ALPHA_SUS,
     SUPPORTED_DATASETS,
-    SUPPORTED_LLMS,
     SUPPORTED_MODELS,
     SUPPORTED_RERANKING_ALPHAS,
 )
@@ -304,15 +303,21 @@ def evaluate_recsys() -> None:
     item_popularity = list(enumerate(item_popularity))
 
     results = []
+    # Calculate total count based on available LLMs per model
+    total_count = 0
+    for model in SUPPORTED_MODELS:
+        total_count += (
+            len(model_registry[model]["preds_paths"].keys())
+            * len(SUPPORTED_RERANKING_ALPHAS)
+            * len(config["recbole"]["topk"])
+        )
+
     with tqdm(
-        total=len(SUPPORTED_MODELS)
-        * len(SUPPORTED_LLMS)
-        * len(SUPPORTED_RERANKING_ALPHAS)
-        * len(config["recbole"]["topk"]),
+        total=total_count,
         desc="Evaluating recommendation models",
     ) as pbar:
         for model in SUPPORTED_MODELS:
-            for llm in SUPPORTED_LLMS:
+            for llm in model_registry[model]["preds_paths"].keys():
                 for alpha in SUPPORTED_RERANKING_ALPHAS:
                     # Load prediction data
                     preds_path = model_registry[model]["preds_paths"][llm][
