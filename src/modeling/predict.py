@@ -160,16 +160,10 @@ def _compute_sas_scores(
         [emission_data.get(asin) for asin in external_item_ids],
     )
 
-    # Apply logarithmic transformation to emphasize differences in lower emission ranges
-    # (add 1 to avoid log(0) if global_min_emission is 0)
-    log_emissions = np.log1p(emission_values)
-    log_global_max = np.log1p(global_max_emission)
-    log_global_min = np.log1p(global_min_emission)
-
-    # Normalize emission values (min-max normalization based on log scale)
-    if log_global_max != log_global_min:
-        emission_values_norm = (log_global_max - log_emissions) / (
-            log_global_max - log_global_min
+    # Normalize emission values (min-max normalization)
+    if global_max_emission != global_min_emission:
+        emission_values_norm = (global_max_emission - emission_values) / (
+            global_max_emission - global_min_emission
         )
     else:
         emission_values_norm = np.zeros_like(emission_values)
