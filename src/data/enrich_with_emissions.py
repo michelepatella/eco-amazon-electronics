@@ -623,14 +623,18 @@ async def enrich_data_with_emissions() -> None:
     processed_lookup = {}
     if Path(processed_jsonl_file).exists():
         for p in load_jsonl(str(Path(processed_jsonl_file))):
-            if "title" in p:
-                processed_lookup[p["title"]] = p
+            key = p.get("parent_asin") or p.get("title")
+            if key:
+                processed_lookup[key] = p
 
     products = []
     products_to_process = []
     for idx, product_data in enumerate(load_jsonl(str(Path(raw_jsonl_file)))):
+        lookup_key = product_data.get("parent_asin") or product_data.get(
+            "title",
+        )
         existing_data = processed_lookup.get(
-            product_data["title"],
+            lookup_key,
             product_data,
         )
 
