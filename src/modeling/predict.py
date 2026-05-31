@@ -472,7 +472,7 @@ def predict_recommendations() -> None:
     total_predictions = 0
 
     for model in SUPPORTED_MODELS:
-        for llm in SUPPORTED_LLMS:
+        for llm in model_registry[model]["preds_paths"].keys():
             for alpha in SUPPORTED_RERANKING_ALPHAS:
                 pred_path = model_registry[model]["preds_paths"][llm][alpha]
 
