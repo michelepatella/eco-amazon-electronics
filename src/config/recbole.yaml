@@ -217,7 +217,7 @@ recbole:
   # Type: list[int]
   # Constraints: > 0
   # ------------------------------------------------------------------------------------
-  topk: [5, 10, 20, 50]
+  topk: [5, 10, 20]
 
   # ------------------------------------------------------------------------------------
   # Description: Primary validation metric for early stopping and model selection
