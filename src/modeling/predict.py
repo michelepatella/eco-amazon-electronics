@@ -160,10 +160,16 @@ def _compute_sas_scores(
         [emission_data.get(asin) for asin in external_item_ids],
     )
 
-    # Normalize emission values (min-max normalization)
-    if global_max_emission != global_min_emission:
-        emission_values_norm = (global_max_emission - emission_values) / (
-            global_max_emission - global_min_emission
+    # Apply logarithmic transformation to emphasize differences in lower emission ranges
+    # (add 1 to avoid log(0) if global_min_emission is 0)
+    log_emissions = np.log1p(emission_values)
+    log_global_max = np.log1p(global_max_emission)
+    log_global_min = np.log1p(global_min_emission)
+
+    # Normalize emission values (min-max normalization based on log scale)
+    if log_global_max != log_global_min:
+        emission_values_norm = (log_global_max - log_emissions) / (
+            log_global_max - log_global_min
         )
     else:
         emission_values_norm = np.zeros_like(emission_values)
@@ -179,7 +185,7 @@ def _compute_sas_scores(
     if alpha == RERANKING_ALPHA_PURE:
         sas_scores = scores_norm
     else:
-        emission_values_norm = np.power(emission_values_norm, 2)
+        emission_values_norm = np.power(emission_values_norm, 3)
         sas_scores = alpha * scores_norm + (1 - alpha) * emission_values_norm
 
     # Sort items by sustainability-aware score in descending order
