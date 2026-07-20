@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "eco-amazon-electronics"
 version = "0.1.0"
-description = "Multi-objective recommender system for Amazon electronics, balancing user preferences with agent-derived carbon footprint information for sustainable e-commerce."
+description = "Multi-objective recommendation pipeline balancing item relevance with environmental impact for sustainable recommendations."
 readme = "README.md"
 requires-python = "==3.14.4"
 
