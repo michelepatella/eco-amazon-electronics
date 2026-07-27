@@ -1,6 +1,3 @@
-<a id="readme-top"></a>
-
-<br/>
 <div align="center">
 
   [![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=ffdd54)](https://www.python.org/)
@@ -15,9 +12,9 @@
   <table>
     <tr>
       <td align="center">
-        🌱 <b><code>Multi-objective recommendation pipeline</b></code><br>
+        🌱 <b>Multi-objective recommendation pipeline</b><br>
         balancing item relevance with environmental impact<br>
-        for sustainable recommendations
+        for sustainable recommendations.
       </td>
     </tr>
   </table>
@@ -29,49 +26,65 @@
 
 ---
 
-A <code>**multi-objective recommendation pipeline**</code> for <code>**collaborative filtering**</code> on <code>**implicit feedback**</code>, applied to the <code>**Amazon Reviews '23 Electronics**</code> dataset to demonstrate how enriching e-commerce catalogs with <code>**carbon footprint information**</code> can be used to balance product relevance with environmental impact to recommend <code>**greener products**</code>.
+A **multi-objective recommendation pipeline** for **collaborative filtering** on **implicit feedback**, applied to the **Amazon Reviews '23 Electronics** dataset to demonstrate how enriching e-commerce catalogs with **carbon footprint information** can be used to balance product relevance with environmental impact to recommend **greener products**.
 
 > [!TIP]
-> <code>**How are products enriched with Product Carbon Footprint (PCF)?**</code>  
+> **How are products enriched with Product Carbon Footprint (PCF)?**  
 > The pipeline leverages an AI agent integrating LLM reasoning, function calling, and web retrieval for Product Carbon Footprint estimation.  
 > [» Discover more](https://github.com/michelepatella/reco2gnizer)
 
-## <code>Pipeline</code>
+---
 
-```text
+### <code>Pipeline</code>
+
                   ┌─────────────────────────────────────────────────────────┐
-                  │                    Amazon Reviews'23                    │
-                  │                                                         │
+                  │                    Amazon Reviews'23                    │                                             
                   │  ┌---------------------┐       ┌---------------------┐  │
-                  │  │    User Reviews     │       │    Item Metadata    │  │
+                  │  │    Item Metadata    │       │     User Reviews    │  │
                   │  └----------┬----------┘       └----------┬----------┘  │
                   └─────────────┼─────────────────────────────┼─────────────┘
                                 │                             │
                      ╔══════════▼══════════╗       ╔══════════▼══════════╗
-                     ║  Data Preprocessing ║       ║ PCF Data Enrichment ║
-                     ╚══════════┬══════════╝       ╚══════════┬══════════╝
+                     ║      PCF Data       ║       ║  Data Preprocessing ║
+                     ║     Augmentation    ║       ╚══════════┬══════════╝
+                     ╚══════════┬══════════╝                  │
+                                │                  ╔══════════▼══════════╗
+                     ┌----------▼----------┐       ║    Model Training   ║
+                     │      Augmented      │       ╚══════════┬══════════╝
+                     │    Item Metadata    │                  │
+                     └----------┬----------┘       ╔══════════▼══════════╗
+                                │                  ║   Model Inference   ║
+                                │                  ╚══════════┬══════════╝
                                 │                             │
-                     ╔══════════▼══════════╗       ┌----------▼----------┐
-                     ║   Model Training &  ║       │       Enriched      │
-                     ║      Inference      ║       |    Item Metadata    |
-                     ╚══════════┬══════════╝       └----------┬----------┘
-                                │                             │
-                     ┌----------▼----------┐                  │
-                     │   Recommendations   │                  │
-                     └----------┬----------┘                  │
+                                │                  ┌----------▼----------┐
+                                │                  │   Recommendations   │
+                                │                  └----------┬----------┘
                                 │                             │
                                 └──────────────┬──────────────┘
                                                │
                                 ╔══════════════▼══════════════╗
-                                ║     Sustainability-aware    ║
-                                ║  Recommendation Re-ranking  ║
+                                ║    Sustainability-Aware     ║
+                                ║ Recommendations Re-Ranking  ║
                                 ╚══════════════┬══════════════╝
                                                │
                                 ┌--------------▼--------------┐
-                                │  Re-ranked Recommendations  │
+                                │  Re-Ranked Recommendations  │
                                 └--------------┬--------------┘
                                                │
                                 ╔══════════════▼══════════════╗
                                 ║       Model Evaluation      ║
                                 ╚═════════════════════════════╝
-```
+
+#### <code>Amazon Reviews'23</code>
+
+#### <code>PCF Data Augmentation</code>
+
+#### <code>Data Preprocessing</code>
+
+#### <code>Model Training</code>
+
+#### <code>Model Inference</code>
+
+#### <code>Sustainability-Aware Recommendation Re-Ranking</code>
+
+#### <code>Model Evaluation</code>
