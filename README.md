@@ -29,14 +29,15 @@
 
 ---
 
-A **multi-objective recommendation pipeline** on the **Amazon Reviews '23 Electronics** dataset, demonstrating how enriching e-commerce catalogs with **carbon footprint information** can balance product relevance with environmental impact to recommend **greener products**.
+A <code>**multi-objective recommendation pipeline**</code> for <code>**collaborative filtering**</code> on <code>**implicit feedback**</code>, applied to the <code>**Amazon Reviews '23 Electronics**</code> dataset to demonstrate how enriching e-commerce catalogs with <code>**carbon footprint information**</code> can be used to balance product relevance with environmental impact to recommend <code>**greener products**</code>.
 
 > [!TIP]
-> **How are products enriched with Product Carbon Footprint (PCF)?**  
+> <code>**How are products enriched with Product Carbon Footprint (PCF)?**</code>  
 > The pipeline leverages an AI agent integrating LLM reasoning, function calling, and web retrieval for Product Carbon Footprint estimation.  
 > [» Discover more](https://github.com/michelepatella/reco2gnizer)
 
-## Pipeline
+## <code>Pipeline</code>
+
 ```text
                   ┌─────────────────────────────────────────────────────────┐
                   │                    Amazon Reviews'23                    │
