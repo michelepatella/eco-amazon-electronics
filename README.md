@@ -2,12 +2,18 @@
 
 <br/>
 <div align="center">
-  <h3 align="center">🌱</h3>
-  <p align="center">
-    Multi-objective recommendation pipeline balancing<br>item relevance with environmental impact for<br>sustainable recommendations.
-  </p>
-  <p align="center">
-  </p>
+  <h3 align="center"></h3>
+  <div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        🌱 <code><b>Multi-objective recommendation pipeline</b></code><br>
+        balancing item relevance with environmental impact<br>
+        for sustainable recommendations
+      </td>
+    </tr>
+  </table>
+</div>
 
   <a href="https://github.com/michelepatella/eco-amazon-electronics">GitHub</a> •
   <a href="https://dagshub.com/michelepatella/eco-amazon-electronics">DagsHub</a>
@@ -30,7 +36,7 @@
 
 ---
 
-
+A **multi-objective recommendation pipeline** on the **Amazon Reviews '23 Electronics** dataset, demonstrating how enriching e-commerce catalogs with **carbon footprint information** can balance product relevance with environmental impact to recommend **greener products**.
 
 ## Pipeline
 ```text
