@@ -26,11 +26,14 @@
 
 ---
 
-A **multi-objective recommendation pipeline** for **collaborative filtering** on **implicit feedback**, applied to the **Amazon Reviews '23 Electronics** dataset to demonstrate how enriching e-commerce catalogs with **carbon footprint information** can be used to balance product relevance with environmental impact to recommend **greener products**.
+A **multi-objective recommendation pipeline** for **collaborative filtering** on **implicit feedback**, applied to the **Amazon Reviews '23 Electronics** dataset to demonstrate how augmenting e-commerce catalogs with **carbon footprint information** can be used to balance product relevance with environmental impact for **sustainable recommendations**.
+
+🎉 **Key Result:** Achieved a **25% reduction** in the carbon footprint of recommendation lists with only a **4% drop** in recommendation quality!
 
 > [!TIP]
-> **How are products enriched with Product Carbon Footprint (PCF)?**  
-> The pipeline leverages an AI agent integrating LLM reasoning, function calling, and web retrieval for Product Carbon Footprint estimation.  
+> **How are products augmented with Product Carbon Footprint (PCF)?**  
+> The pipeline leverages an AI agent integrating LLM reasoning, function calling, and web retrieval for PCF estimation.
+>
 > [» Discover more](https://github.com/michelepatella/reco2gnizer)
 
 ---
@@ -75,16 +78,51 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
                                 ║       Model Evaluation      ║
                                 ╚═════════════════════════════╝
 
-#### <code>Amazon Reviews'23</code>
+<details>
+  <summary><b><code>Amazon Reviews'23</code></b></summary>
+  <br>
+  
+  Write here...
+</details>
 
-#### <code>PCF Data Augmentation</code>
+<details>
+  <summary><b><code>PCF Data Augmentation</code></b></summary>
+  <br>
+  
+  Write here...
+</details>
 
-#### <code>Data Preprocessing</code>
+<details>
+  <summary><b><code>Data Preprocessing</code></b></summary>
+  <br>
+  
+  Write here...
+</details>
 
-#### <code>Model Training</code>
+<details>
+  <summary><b><code>Model Training</code></b></summary>
+  <br>
+  
+  Write here...
+</details>
 
-#### <code>Model Inference</code>
+<details>
+  <summary><b><code>Model Inference</code></b></summary>
+  <br>
+  
+  Write here...
+</details>
 
-#### <code>Sustainability-Aware Recommendation Re-Ranking</code>
+<details>
+  <summary><b><code>Sustainability-Aware Recommendation Re-Ranking</code></b></summary>
+  <br>
+  
+  Write here...
+</details>
 
-#### <code>Model Evaluation</code>
+<details>
+  <summary><b><code>Model Evaluation</code></b></summary>
+  <br>
+  
+  Write here...
+</details>
