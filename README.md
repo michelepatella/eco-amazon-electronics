@@ -64,7 +64,7 @@ Asynchronously augments **item metadata** with **carbon footprint information** 
 
   > As a preliminary step, the **quality of the agent's PCF estimations** are evaluated on **three ground-truth datasets**—_Electronics_, _Clothing_, and _Home and Kitchen_, each comprising **194 real-world products**, using **OpenAI o3-mini** and **Google Gemini 2.5 Flash** (temperature 0.0) as the **agent's reasoning engine**.
 > 
-> The agent is compared against its corresponding **zero-shot LLM baseline** using [**this prompt**](https://github.com/michelepatella/eco-amazon-electronics/blob/main/ZERO_SHOT_LLM_BASELINE_PROMPT.md), collecting four estimates per product, and using only its title as input. Performance is measured both in terms of **estimation accuracy** (MAE, WAPE) and **ability to rank products** based on their carbon footprint (Spearman’s Rank Correlation Coefficient).
+> The agent is compared against its corresponding **zero-shot LLM baseline** using [**this prompt**](https://github.com/michelepatella/eco-amazon-electronics/blob/main/ZERO_SHOT_LLM_BASELINE_PROMPT.md), collecting four estimates per product, and using only its title as input. Performance is measured both in terms of **estimation accuracy** (MAE, WAPE) and **ability to rank products** based on their carbon footprints (Spearman’s Rank Correlation Coefficient).
 </details>
 
 
