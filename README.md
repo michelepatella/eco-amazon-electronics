@@ -30,7 +30,7 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 
 🎉 **Key Result:** Achieved a **25% reduction** in the carbon footprint of recommendation lists with only a **4% drop** in recommendation quality!
 
-<br>
+---
 
 ### <code>Recommendation Pipeline</code>
 
