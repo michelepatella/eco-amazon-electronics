@@ -40,60 +40,44 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 </picture>
 
 <br>
-<br>
 
-<details>
-  <summary><b><code>Amazon Reviews'23</code></b></summary>
-  <br>
+#### <b><code>Amazon Reviews'23</code></b>
+
+The pipeline leverages a **_15_-core filtered** version of the [**Amazon Reviews'23**](https://amazon-reviews-2023.github.io/) **Electronics** dataset, comprising metadata for **11,495 items** and **464,464 reviews** from **21,751 users** (May 1996 – September 2023).
+
+#### <b><code>PCF Data Augmentation</code></b>
+
+Asynchronously augments **item metadata** with **carbon footprint information** through an [**AI agent**](https://github.com/michelepatella/reco2gnizer), implementing a semaphore mechanism with concurrency limits to guarantee **scalability** and **efficiency** when processing large-scale e-commerce catalogs.
+
+#### <b><code>Data Preprocessing</code></b>
+
+Processes **user reviews** through a **multi-stage pipeline**:
+1. **User-Item Interaction Deduplication**: Retains only the most recent review per user-item pair to accurately represent current user preferences.
+2. **Mappings**: Converts original user and item IDs into sequential, zero-based indices required by the recommendation algorithms.
+3. **Rating Binarization**: Converts explicit ratings (1–5 scale) into implicit feedback (0/1 outcome) by assigning a value of 1 to reviews with a rating $\ge 5$ (and 0 otherwise).
+4. **User-Aware Temporal Split**: For each user, interactions are chronologically split into train (80%), validation (10%), and test (10%) sets to replicate a realistic evaluation scenario and prevent data leakage.
   
-  > The pipeline leverages a **15-core filtered** version of the [**Amazon Reviews'23**](https://amazon-reviews-2023.github.io/) **Electronics** dataset, comprising **11,495 item metadata** and **464,464 reviews** from **21,751 users** (May 1996-September 2023).
-</details>
+> [!NOTE]
+> Prevents cold-start items in evaluation by ensuring validation and test sets contain only items present in the training set.
 
-<details>
-  <summary><b><code>PCF Data Augmentation</code></b></summary>
-  <br>
-  
-  > This step asynchronously augments **item metadata** with **carbon footprint information** through an [**AI agent**](https://github.com/michelepatella/reco2gnizer), implementing a semaphore mechanism with concurrency limits to guarantee **scalability** and **efficiency** when processing large-scale e-commerce catalogs.
-</details>
+#### <b><code>Model Training</code></b>
 
-<details>
-  <summary><b><code>Data Preprocessing</code></b></summary>
-  <br>
-  
-  > This stage processes **user reviews** by applying a **multi-stage pipeline**:
-  > 1. **User-Item Interaction Deduplication**: Multiple reviews for the same product by the same user are removed, keeping only the most recent reviews as the most representative indicator of the user's preference, ensuring data consistency.
->   2. **Mapping**: Converts original user and item identifiers into sequential, zero-based indices required by the recommendation algorithms employed in the subsequent pipeline stages.
->   3. **Rating Binarization**: As the pipeline is based on implicit feedbacks, ratings of user reviews are mapped from (0-5) to a binary 0/1 outcome by assigning a value of 1 to all reviews with a rating >= 5, and 0 otherwise.
->   4. **User-Aware Temporal Split**: For each user, reviews are split into train (80%, oldest interactions), validation (10%, more recent interactions), and test sets (10%, most recent interactions), replicating a realistic scenario and preventing temporal data leakage.
->
-> 💡 **Note**: The cold-start problem is addressed by ensuring that the validation and test sets contain only interactions involving items already present in the train set, removing the others.
+Performs concurrent **hyperparameter optimization**—using a grid-based variant generation strategy with an early-stopping scheduler (ASHA) to reduce computational cost—and **final training** of two collaborative filtering algorithms: **BPR** and **LightGCN**.
 
-</details>
+#### <b><code>Model Inference</code></b>
 
-<details>
-  <summary><b><code>Model Training</code></b></summary>
-  <br>
-  
-  > This phase performs concurrent **hyperparameter optimization**—a grid-based variant generation strategy with an early-stopping scheduler (ASHA) to reduct computational cost—and **final training** of two collaborative filtering algorithms: **BPR** and **LightGCN**. 
-</details>
+Generates the **top-100 user recommendations** using the trained models by performing a **full-sort inference** procedure across all users in the test set. To ensure **memory efficiency** and **scalability**, users are processed in fixed-size batches.
 
-<details>
-  <summary><b><code>Model Inference</code></b></summary>
-  <br>
-  
-  > This step generates the **top-100 user recommendations** using the trained models by performing a **full-sort inference** procedure over all the users contained in the test set. To ensure **memory efficiency** and **scalability**, users are processed in fixed-size batches.
-</details>
+#### <b><code>Sustainability-Aware Recommendation Re-Ranking</code></b>
 
-<details>
-  <summary><b><code>Sustainability-Aware Recommendation Re-Ranking</code></b></summary>
-  <br>
-  
-  Write here...
-</details>
+Applies a **model-agnostic re-ranking** strategy to each user's top-100 recommendations to balance **item relevance** and **carbon footprint** via the **Sustainability-aware Score (SaS)**:
 
-<details>
-  <summary><b><code>Model Evaluation</code></b></summary>
-  <br>
-  
-  Write here...
-</details>
+$$\text{SaS}(u, i) = \alpha \cdot \hat{r}(u, i) + (1 - \alpha) \cdot \hat{s}(i) \in [0, 1]$$
+* $\hat{r}(u, i)$: Min-max normalized **recommendation score** from the recommender model.
+* $\hat{s}(i)$: **Sustainability score**, computed from the estimated carbon footprint via $\log(1+x)$ scaling (emphasizes differences in lower emission ranges and mitigates high-emission outliers), inverse min-max normalization, and a cubic transformation (penalizes high-emission items).
+* $\alpha \in \{0.25, 0.5, 0.75, 1.0\}$: **Weighting factor** controlling the trade-off between item relevance and sustainability (lower values prioritize sustainable items).
+
+#### <b><code>Model Evaluation</code></b>
+
+Evaluates re-ranked recommendations against original ones in terms of **accuracy** (Recall@k), **ranking quality** (NDCG@k), **catalog diversity** (GiniIndex@k), **popularity bias** (AveragePopularity@k), and **carbon fooprint** (Emissions@k), under different $$\alpha$$ and top-_k_ scenarios and applying the **AllItems** evaluation methodology.
+
