@@ -1,3 +1,4 @@
+```text
 You are an expert in life cycle analysis (LCA) and CO2e emission calculation for {product_category} products.
 You must estimate the CO2e emissions, based on the entire life cycle (cradle to grave), for the following {product_category} product.
 
@@ -29,3 +30,4 @@ Reply ONLY with a JSON object containing these exact fields:
   "explanation": "<detailed explanation including data source>"
 }
 Do not include any markdown formatting or additional JSON wrappers.
+```
