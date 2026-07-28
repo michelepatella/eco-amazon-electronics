@@ -26,7 +26,7 @@
 
 ---
 
-### <code>Overview</code>
+### <code>• Overview</code>
 
 A **multi-objective recommendation pipeline** for **collaborative filtering** on **implicit feedback**, applied to the **Amazon Reviews'23 Electronics** dataset to demonstrate how augmenting e-commerce catalogs with **carbon footprint information** can be used to balance product relevance with environmental impact for **sustainable recommendations**.
 
@@ -41,7 +41,7 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 
 ---
 
-### <code>Recommendation Pipeline</code>
+### <code>• Recommendation Pipeline</code>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/47c57d15-f968-493c-adc5-86714a75f48d">
@@ -50,15 +50,25 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 
 <br>
 
-#### <b><code>Amazon Reviews'23</code></b>
-
+#### <b><code>◦ Amazon Reviews'23</code></b>
+  
 The pipeline leverages a **_15_-core filtered** version of the [**Amazon Reviews'23**](https://amazon-reviews-2023.github.io/) **Electronics** dataset, comprising metadata for **11,495 items** and **464,464 reviews** from **21,751 users** (May 1996 – September 2023).
 
-#### <b><code>PCF Data Augmentation</code></b>
+#### <b><code>◦ PCF Data Augmentation</code></b>
 
-Asynchronously augments **item metadata** with **carbon footprint information** through an [**AI agent**](https://github.com/michelepatella/reco2gnizer) powered by Gemini 2.5 Flash, implementing a semaphore mechanism with concurrency limits to guarantee **scalability** and **efficiency** when processing large-scale e-commerce catalogs.
+Asynchronously augments **item metadata** with **carbon footprint information** through an [**AI agent**](https://github.com/michelepatella/reco2gnizer) powered by Google Gemini 2.5 Flash (max 5 web search results and 3 searches with <code>auto</code> modality), implementing a semaphore mechanism with concurrency limits to guarantee **scalability** and **efficiency** when processing large-scale e-commerce catalogs.
 
-#### <b><code>Data Preprocessing</code></b>
+<details>
+<summary><b>Does the AI Agent Reliably Estimate PCF?</b></summary>
+  <br>
+
+  > As a preliminary step, the **quality of the agent's PCF estimations** are evaluated on **three ground-truth datasets**—_Electronics_, _Clothing_, and _Home and Kitchen_, each comprising **194 real-world products**, using **OpenAI o3-mini** and **Google Gemini 2.5 Flash** (temperature 0.0) as the **agent's reasoning engine**.
+> 
+> The agent is compared against its corresponding **zero-shot LLM baseline** using [**this prompt**](https://github.com/michelepatella/eco-amazon-electronics/blob/main/ZERO_SHOT_LLM_BASELINE_PROMPT.md), collecting four estimates per product, and using only its title as input. Performance is measured both in terms of **estimation accuracy** (MAE, WAPE) and **ability to rank products** based on their carbon footprint (Spearman’s Rank Correlation Coefficient).
+</details>
+
+
+#### <b><code>◦ Data Preprocessing</code></b>
 
 Processes **user reviews** through a **multi-stage pipeline**:
 1. **User-Item Interaction Deduplication**: Retains only the most recent review per user-item pair to accurately represent current user preferences.
@@ -66,13 +76,9 @@ Processes **user reviews** through a **multi-stage pipeline**:
 3. **Rating Binarization**: Converts explicit ratings (1–5 scale) into implicit feedback (0/1 outcome) by assigning a value of 1 to reviews with a rating $\ge 5$ (and 0 otherwise).
 4. **User-Aware Temporal Split**: For each user, interactions are chronologically split into train (80%), validation (10%), and test (10%) sets to replicate a realistic evaluation scenario and prevent data leakage.
   
-> [!TIP]
-> **Cold-start items** in evaluation is prevented by ensuring validation and test sets contain only items present in the training set.
-  
-> [!NOTE]
-> The **final user reviews dataset** contains **11,466 items**, **464,001 reviews**, and **21,751 users**.
+**Cold-start items** in evaluation is prevented by ensuring validation and test sets contain only items present in the training set. The **final user reviews dataset** contains **11,466 items**, **464,001 reviews**, and **21,751 users**.
 
-#### <b><code>Model Training</code></b>
+#### <b><code>◦ Model Training</code></b>
 
 This phase performs concurrent **hyperparameter optimization** using Ray Tune (2 CPU cores, 10 trial samples, max 20 epochs with patience 5, grid search with ASHA early stopping, and NDCG@10 validation metric) and **final training** of two collaborative filtering algorithms (Adam optimizer and max 500 epochs with patience 15): **BPR** and **LightGCN**.
 
@@ -109,26 +115,26 @@ This phase performs concurrent **hyperparameter optimization** using Ray Tune (2
     </tr>
     <tr>
       <td align="left"><code>n_layers</code></td>
-      <td align="center">—</td>
+      <td align="center">-</td>
       <td align="center">1, 2, <b>3</b></td>
     </tr>
     <tr>
       <td align="left"><code>reg_weight</code></td>
-      <td align="center">—</td>
+      <td align="center">-</td>
       <td align="center"><b>1e-5</b>, 1e-4</td>
     </tr>
   </tbody>
 </table>
 
-<sub>*Note: Bold values represent the best hyperparameters found.*</sub>
+<sub>*Note: Bold values represent the best hyperparameters found for BPR (epoch 30, NDCG@10=0.014336) and LightGCN (epoch 38, NDCG@10=0.015403).*</sub>
 
 </div>
 
-#### <b><code>Model Inference</code></b>
+#### <b><code>◦ Model Inference</code></b>
 
 Generates the **top-100 user recommendations** using the trained models by performing a **full-sort inference** procedure across all users in the test set. To ensure **memory efficiency** and **scalability**, users are processed in fixed-size batches.
 
-#### <b><code>Sustainability-Aware Recommendation Re-Ranking</code></b>
+#### <b><code>◦ Sustainability-Aware Recommendation Re-Ranking</code></b>
 
 Applies a **model-agnostic re-ranking** strategy to each user's top-100 recommendations to balance **item relevance** and **carbon footprint** via the **Sustainability-aware Score (SaS)**:
 
@@ -137,7 +143,13 @@ $$\text{SaS}(u, i) = \alpha \cdot \hat{r}(u, i) + (1 - \alpha) \cdot \hat{s}(i) 
 * $\hat{s}(i)$: **Sustainability score**, computed from the estimated carbon footprint via $\log(1+x)$ scaling (emphasizes differences in lower emission ranges and mitigates high-emission outliers), inverse min-max normalization, and a cubic transformation (penalizes high-emission items).
 * $\alpha \in \{0.25, 0.5, 0.75, 1.0\}$: **Weighting factor** controlling the trade-off between item relevance and sustainability (lower values prioritize sustainable items).
 
-#### <b><code>Model Evaluation</code></b>
+#### <b><code>◦ Model Evaluation</code></b>
 
 Evaluates re-ranked recommendations against original ones in terms of **accuracy** (Recall@k), **ranking quality** (NDCG@k), **catalog diversity** (GiniIndex@k), **popularity bias** (AveragePopularity@k), and **carbon footprint** (Emissions@k), under different $$\alpha$$ and top-_k_$$\in \{5, 10, 20\}$$ scenarios and by applying the **AllItems** evaluation methodology.
 
+<br>
+
+> [!NOTE]
+> [**Data**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/data), [**model artifacts**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/models), and [**execution logs**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/logs) (with full results) are tracked via **DVC**.
+>
+> The pipeline was executed on a **local machine** equipped with an Apple M2 8-Core Processor and 8 GB of unified memory, leveraging the integrated MPS backend.
