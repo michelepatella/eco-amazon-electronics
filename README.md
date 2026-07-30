@@ -29,7 +29,7 @@
 
 ### <code>• Overview</code>
 
-A **multi-objective recommendation pipeline** for **collaborative filtering** on **implicit feedback**, applied to the **Amazon Reviews'23 Electronics** dataset to demonstrate how augmenting e-commerce catalogs with **carbon footprint information** can be used to balance product relevance with environmental impact for **sustainable recommendations**.
+A **multi-objective recommendation pipeline** for **collaborative filtering** on **implicit feedback**, applied to the **Amazon Reviews'23 Electronics** dataset to demonstrate how augmenting e-commerce catalogs with **carbon footprint information** can be used to balance product relevance with environmental impact for **sustainable recommendations**, without compromising recommendation quality.
 
 <div align="center">
   <picture>
@@ -38,7 +38,7 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
   </picture>
 </div>
 
-🎉 **Key Result:** Achieved a **25% reduction** in the carbon footprint of recommendation lists with only a **4% drop** in recommendation quality!
+🎉 Achieved a **25% reduction** in the carbon footprint of recommendation lists with only a **4% drop** in recommendation quality!
 
 ---
 
@@ -97,7 +97,7 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 <table border="0">
   <td style="border: none;">
     <b><code>◦ Model Training</code></b><br><br>
-    This phase performs concurrent <b>hyperparameter optimization</b> using Ray Tune (2 CPU cores, 10 trial samples, max 20 epochs with patience 5, grid search with ASHA early stopping, and NDCG@10 validation metric) and <b>final training</b> of two collaborative filtering algorithms (Adam optimizer and max 500 epochs with patience 15): <b>BPR</b> and <b>LightGCN</b>.<br><br>
+    Performs concurrent <b>hyperparameter optimization</b> using Ray Tune (2 CPU cores, 10 trial samples, max 20 epochs with patience 5, grid search with ASHA early stopping, and NDCG@10 validation metric) and <b>final training</b> of two collaborative filtering algorithms (Adam optimizer and max 500 epochs with patience 15): <b>BPR</b> and <b>LightGCN</b>.<br><br>
     <div align="center">
       <table>
         <thead>
@@ -177,7 +177,8 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
       <li><b>Product relevance</b> and <b>carbon impact</b> can be effectively balanced for <b>sustainable recommendations</b>, although this depends on the choice of the <b>weighting factor</b> $\alpha$.</li>
       <li>While <b>aggressive optimizations</b> ($\alpha &le; 0.5$) strongly degrade model performance, setting $\alpha=0.75$ (at $k=20$) yields the <b>best trade-off</b>.</li>
       <li>In this <b>optimal scenario</b>, <b>BPR</b> reduces the <b>carbon footprint</b> of recommendation lists by <b>25%</b> with only a <b>4% drop</b> in recommendation quality; <b>LightGCN</b>, which proves to be less sensitive to recommendation re-ranking, reduces the <b>carbon footprint</b> by <b>3%</b> with a <b>4% drop</b> in recommendation quality.</li>
-      <li>When scaled across the nearly <b>22k test users</b>, these <b>carbon footprint savings</b> correspond to <b>181</b> and <b>16 tons of CO₂e</b> saved for <b>BPR</b> and <b>LightGCN</b>, respectively.</li>
+      <li>When scaled across the <b>21,751 test users</b>, these <b>carbon footprint savings</b> correspond to <b>181</b> and <b>16 tons of CO₂e</b> saved for <b>BPR</b> and <b>LightGCN</b>, respectively.</li>
+      <li>The <b>sustainability-aware recommendation re-ranking strategy</b> improves <b>popularity debiasing</b>, making models less prone to recommending <b>mainstream items</b>.</li>
     </ul>
   </td>
 </table>
@@ -185,6 +186,4 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 <br>
 
 > [!NOTE]
-> - [**Data**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/data), [**model artifacts**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/models), and [**execution logs**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/logs) (with full results) are tracked via **DVC**.
->
-> - The pipeline was executed on a **local machine** equipped with an Apple M2 8-Core Processor and 8 GB of unified memory, leveraging the integrated MPS backend.
+> [**Data**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/data), [**model artifacts**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/models), and [**execution logs**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/logs) (with full results) are tracked via **DVC**.
