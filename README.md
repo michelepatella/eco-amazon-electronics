@@ -82,8 +82,9 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
       <li><b>Mappings</b>: Converts original user and item IDs into sequential, zero-based indices required by the recommendation algorithms.</li>
       <li><b>Rating Binarization</b>: Converts explicit ratings (1–5 scale) into implicit feedback (0/1 outcome) by assigning a value of 1 to reviews with a rating &ge; 5 (and 0 otherwise).</li>
       <li><b>User-Aware Temporal Split</b>: For each user, interactions are chronologically split into train (80%), validation (10%), and test (10%) sets to replicate a realistic evaluation scenario and prevent data leakage.</li>
+      <li><b>Cold-Start Filtering</b>: Prevents evaluation on unseen items by ensuring validation and test sets contain only items present in the training set.</li>
     </ol>
-    <b>Cold-start items</b> in evaluation are prevented by ensuring validation and test sets contain only items present in the training set. The <b>final user reviews dataset</b> contains <b>11,466 items</b>, <b>464,001 reviews</b>, and <b>21,751 users</b>.
+    The <b>final user reviews dataset</b> contains <b>11,466 items</b>, <b>464,001 reviews</b>, and <b>21,751 users</b>.
   </td>
 </table>
 
@@ -133,15 +134,16 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
           </tr>
         </tbody>
       </table>
-      <sub><i>Note: Bold values represent the best hyperparameters found for BPR (epoch 30, NDCG@10=0.014336) and LightGCN (epoch 38, NDCG@10=0.015403).</i></sub>
+      <sub><i>Note: Bold values represent the best hyperparameters found for BPR (epoch 30, NDCG@10=0.014336) and LightGCN (epoch 38, NDCG@10=0.015403).<br>Execution Time: ~6h for hyperparameter optimization, ~2h for final training.</i></sub>
     </div>
+    
   </td>
 </table>
 
 <table border="0">
   <td style="border: none;">
     <b><code>◦ Model Inference</code></b><br><br>
-    Generates the <b>top-100 user recommendations</b> using the trained models by performing a <b>full-sort inference</b> procedure across all users in the test set. To ensure <b>memory efficiency</b> and <b>scalability</b>, users are processed in fixed-size batches.
+    Generates the <b>top-100 user recommendations</b> using the trained models by performing a <b>full-sort inference</b> procedure across all users in the test set. To ensure <b>memory efficiency</b> and <b>scalability</b>, users are processed in fixed-size batches (batch size = 1,000).
   </td>
 </table>
 
