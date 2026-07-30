@@ -171,7 +171,7 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 <table border="0">
   <td style="border: none;">
     <b><code>◦ Model Evaluation</code></b><br><br>
-    Evaluates re-ranked recommendations against original ones in terms of <b>accuracy</b> (Recall@k), <b>ranking quality</b> (NDCG@k), <b>catalog diversity</b> (GiniIndex@k), <b>popularity bias</b> (AveragePopularity@k), and <b>carbon footprint</b> (Emissions@k), under different $\alpha$ and top- $k \in \{5, 10, 20\}$ scenarios and by applying the <b>AllItems</b> evaluation methodology.<br><br>
+    Evaluates re-ranked recommendations against original ones in terms of <b>accuracy</b> (Recall@k), <b>ranking quality</b> (NDCG@k), <b>catalog diversity</b> (GiniIndex@k), <b>popularity bias</b> (AveragePopularity@k), and <b>carbon footprint</b> (Emissions@k), under different $\alpha$ and $\text{top-}k \in \{5, 10, 20\}$ scenarios and by applying the <b>AllItems</b> evaluation methodology.<br><br>
     <b>Key Findings:</b>
     <ul>
       <li><b>Product relevance</b> and <b>carbon impact</b> can be effectively balanced for <b>sustainable recommendations</b>, although this depends on the choice of the <b>weighting factor</b> $\alpha$.</li>
