@@ -67,7 +67,13 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
       <br>
       <blockquote>
         As a preliminary step, the <b>quality of the agent's PCF estimates</b> is evaluated across <b>three ground-truth datasets</b> (<i>Electronics</i>, <i>Clothing</i>, and <i>Home & Kitchen</i>, 194 real-world products each) using <b>OpenAI o3-mini</b> and <b>Google Gemini 2.5 Flash</b> (temperature 0.0) as <b>reasoning engines</b>.<br><br>
-        The agent is benchmarked against its <b>zero-shot LLM baseline</b> using <a href="https://github.com/michelepatella/eco-amazon-electronics/blob/main/ZERO_SHOT_LLM_BASELINE_PROMPT.md"><b>this prompt</b></a>, collecting four estimates per product based solely on its title. Performance is measured via <b>estimation accuracy</b> (MAE, WAPE) and <b>ranking capacity</b> (Spearman's Rank Correlation Coefficient).
+        The agent is benchmarked against its <b>zero-shot LLM baseline</b> using <a href="https://github.com/michelepatella/eco-amazon-electronics/blob/main/ZERO_SHOT_LLM_BASELINE_PROMPT.md"><b>this prompt</b></a>, collecting four estimates per product based solely on its title. Performance is measured via <b>estimation accuracy</b> (MAE, WAPE) and <b>ranking capacity</b> (Spearman's Rank Correlation Coefficient).<br><br>
+        <b>Key Findings:</b>
+<ul>
+  <li>The <b>agent with Google Gemini 2.5 Flash</b> consistently <b>outperforms</b> its zero-shot baseline, improving <b>estimation accuracy</b> and <b>ranking capability</b> by up to <b>46%</b> and <b>9%</b>, respectively.</li>
+  <li>The <b>agent with OpenAI o3-mini</b> shows <b>contrasting</b> and <b>domain-dependent behavior</b> (possibly due to <i>overthinking</i>): <b>estimation accuracy</b> can be <b>improved</b> by up to <b>79%</b> but can also <b>degrade</b> by up to <b>34%</b>; similarly, <b>ranking capability</b> can be <b>improved</b> by up to <b>16%</b> but can also <b>degrade</b> by up to <b>10%</b>.</li>
+  <li>The <b>agent with Google Gemini 2.5 Flash</b> in the <i>Electronics</i> domain achieves a <b>37% estimation error</b> and a <b>0.84 ranking capability</b>, <b>outperforming</b> the <b>agent with OpenAI o3-mini</b> (<b>50%</b> and <b>0.72</b>) and justifying its adoption in the pipeline.</li>
+</ul>
       </blockquote>
     </details>
   </td>
@@ -165,13 +171,20 @@ A **multi-objective recommendation pipeline** for **collaborative filtering** on
 <table border="0">
   <td style="border: none;">
     <b><code>◦ Model Evaluation</code></b><br><br>
-    Evaluates re-ranked recommendations against original ones in terms of <b>accuracy</b> (Recall@k), <b>ranking quality</b> (NDCG@k), <b>catalog diversity</b> (GiniIndex@k), <b>popularity bias</b> (AveragePopularity@k), and <b>carbon footprint</b> (Emissions@k), under different $\alpha$ and top- $k \in \{5, 10, 20\}$ scenarios and by applying the <b>AllItems</b> evaluation methodology.
+    Evaluates re-ranked recommendations against original ones in terms of <b>accuracy</b> (Recall@k), <b>ranking quality</b> (NDCG@k), <b>catalog diversity</b> (GiniIndex@k), <b>popularity bias</b> (AveragePopularity@k), and <b>carbon footprint</b> (Emissions@k), under different $\alpha$ and top- $k \in \{5, 10, 20\}$ scenarios and by applying the <b>AllItems</b> evaluation methodology.<br><br>
+    <b>Key Findings:</b>
+    <ul>
+      <li><b>Product relevance</b> and <b>carbon impact</b> can be effectively balanced for <b>sustainable recommendations</b>, although this depends on the choice of the <b>weighting factor</b> $\alpha$.</li>
+      <li>While <b>aggressive optimizations</b> ($\alpha &le; 0.5$) strongly degrade model performance, setting $\alpha=0.75$ (at $k=20$) yields the <b>best trade-off</b>.</li>
+      <li>In this <b>optimal scenario</b>, <b>BPR</b> reduces the <b>carbon footprint</b> of recommendation lists by <b>25%</b> with only a <b>4% drop</b> in recommendation quality; <b>LightGCN</b>, which proves to be less sensitive to recommendation re-ranking, reduces the <b>carbon footprint</b> by <b>3%</b> with a <b>4% drop</b> in recommendation quality.</li>
+      <li>When scaled across the nearly <b>22k test users</b>, these <b>carbon footprint savings</b> correspond to <b>181</b> and <b>16 tons of CO₂e</b> saved for <b>BPR</b> and <b>LightGCN</b>, respectively.</li>
+    </ul>
   </td>
 </table>
 
 <br>
 
 > [!NOTE]
-> [**Data**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/data), [**model artifacts**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/models), and [**execution logs**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/logs) (with full results) are tracked via **DVC**.
+> - [**Data**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/data), [**model artifacts**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/models), and [**execution logs**](https://github.com/michelepatella/eco-amazon-electronics/tree/main/logs) (with full results) are tracked via **DVC**.
 >
-> The pipeline was executed on a **local machine** equipped with an Apple M2 8-Core Processor and 8 GB of unified memory, leveraging the integrated MPS backend.
+> - The pipeline was executed on a **local machine** equipped with an Apple M2 8-Core Processor and 8 GB of unified memory, leveraging the integrated MPS backend.
